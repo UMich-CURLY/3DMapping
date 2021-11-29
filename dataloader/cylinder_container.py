@@ -16,14 +16,16 @@ import yaml
 class CylinderContainer:
     def __init__(self, grid_size,
         min_bound=np.array([0, -2.0*np.pi, 0], dtype=np.float32),
-        max_bound=np.array([20, 2.0*np.pi, 10], dtype=np.float32)):
+        max_bound=np.array([20, 2.0*np.pi, 10], dtype=np.float32),
+        default_voxel_val= 0 ):
         """
         Constructor that creates the cylinder coordinate container
 
-        :param grid_size: The number of cells that we want to divide the grid into
+        :param grid_size: The number of cells that we want to divide each dimension of 
+                          the grid into
         :param max_bound: [max radial distance, max_azimuth, max_height]
         :param min_bound: [min radial distance, min_azimuth, min_height]
-
+        :param default_voxel_val: default value to initialize for each voxel
         """
         self.grid_size = grid_size
         self.max_bound = max_bound
@@ -33,9 +35,9 @@ class CylinderContainer:
         self.intervals = None
         self.voxels = None
 
-        self.reset_grid()
+        self.reset_grid(default_voxel_val)
 
-    def reset_grid(self):
+    def reset_grid(self, default_voxel_val):
         """
         Recomputes voxel grid and intializes all values to 0
 
@@ -50,7 +52,9 @@ class CylinderContainer:
             return
 
         # Initialize voxel grid with float32
-        self.voxels = np.array([0]*self.grid_size, dtype=np.float32)
+        self.voxels = np.array([default_voxel_val]*(self.grid_size**3)).reshape((
+                self.grid_size, self.grid_size, self.grid_size
+        ))
 
         print("Initialized voxel grid with {num_cells} cells".format(
             num_cells=self.grid_size))
@@ -66,7 +70,9 @@ class CylinderContainer:
         :param xyz: nx3 np array where rows are points and cols are x,y,z
         :return: nx1 np array where rows are points and col is value at each point
         """
-        return self.voxels[self.grid_ind(input_xyz)]
+        return self.voxels[ self.grid_ind(input_xyz)[:,0],
+                            self.grid_ind(input_xyz)[:, 1],
+                            self.grid_ind(input_xyz)[:, 2]]
 
     def __setitem__(self, input_xyz, input_value):
         """
@@ -74,7 +80,9 @@ class CylinderContainer:
 
         :param input_xyz: nx3 np array where rows are points and cols are x,y,z
         """
-        self.voxels[self.grid_ind(input_xyz)] = input_value
+        self.voxels[self.grid_ind(input_xyz)[:,0],
+                    self.grid_ind(input_xyz)[:, 1],
+                    self.grid_ind(input_xyz)[:, 2]].set_class(input_value)
 
     def grid_ind(self, input_xyz):
         """
@@ -112,8 +120,11 @@ class CylinderContainer:
 
         :return: nx3 np array where rows are points and cols are r,theta,z
         """
+        input_xyz = input_xyz.reshape(-1, 3)
+
         rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2)
         phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0])
+
         return np.stack((rho, phi, input_xyz[:, 2]), axis=1)
 
 
