@@ -67,7 +67,7 @@ class PFNLayer(nn.Module):
         self.units = out_channels
 
         if use_norm:
-            BatchNorm1d = nn.BatchNorm1d(self.units, eps=1e-3, momentum=0.01)
+            self.norm = nn.BatchNorm1d(self.units, eps=1e-3, momentum=0.01)
             self.linear = nn.Linear(in_channels, self.units, bias=False)
         else:
             self.norm = Empty(self.units)
@@ -89,6 +89,10 @@ class PFNLayer(nn.Module):
             return x_concatenated
 
 
+"""
+    For cylindrical coordinates, ensure that the first three features are (r, theta, z).
+    Pillars use (r, theta)
+"""
 class PillarFeatureNet(nn.Module):
     def __init__(self,
                  num_input_features=4,
@@ -101,11 +105,11 @@ class PillarFeatureNet(nn.Module):
         Pillar Feature Net.
         The network prepares the pillar features and performs forward pass through PFNLayers. This net performs a
         similar role to SECOND's second.pytorch.voxelnet.VoxelFeatureExtractor.
-        :param num_input_features: <int>. Number of input features, either x, y, z or x, y, z, r.
+        :param num_input_features: <int>. Number of input features, first three are theta, r, z.
         :param use_norm: <bool>. Whether to include BatchNorm.
         :param num_filters: (<int>: N). Number of features in each of the N PFNLayers.
         :param with_distance: <bool>. Whether to include Euclidean distance to points.
-        :param voxel_size: (<float>: 3). Size of voxels, only utilize x and y size.
+        :param voxel_size: (<float>: 3). Size of voxels, only utilize first two .
         :param pc_range: (<float>: 6). Point cloud range, only utilize x and y min.
         """
 
@@ -138,19 +142,23 @@ class PillarFeatureNet(nn.Module):
 
     def forward(self, features, num_voxels, coors):
 
-        # Find distance of x, y, and z from cluster center
+        # Find distance of r, theta, z from cluster center
         points_mean = features[:, :, :3].sum(dim=1, keepdim=True) / num_voxels.type_as(features).view(-1, 1, 1)
         f_cluster = features[:, :, :3] - points_mean
 
-        # Find distance of x, y, and z from pillar center
+        # Find distance of r and theta from pillar center
         f_center = torch.zeros_like(features[:, :, :2])
-        f_center[:, :, 0] = features[:, :, 0] - (coors[:, 3].float().unsqueeze(1) * self.vx + self.x_offset)
-        f_center[:, :, 1] = features[:, :, 1] - (coors[:, 2].float().unsqueeze(1) * self.vy + self.y_offset)
+        f_center[:, :, 0] = features[:, :, 0] - (coors[:, 0].float().unsqueeze(1) * self.vx + self.x_offset)
+        f_center[:, :, 1] = features[:, :, 1] - (coors[:, 1].float().unsqueeze(1) * self.vy + self.y_offset)
 
-        # Combine together feature decorations
+        # Calculate Euclidean distances
         features_ls = [features, f_cluster, f_center]
         if self._with_distance:
-            points_dist = torch.norm(features[:, :, :3], 2, 2, keepdim=True)
+            euclidean_coords = torch.zeros_like(features[:, :, :3])
+            euclidean_coords[:, :, 0] = features[:, :, 0] * torch.cos(features[:, :, 1])
+            euclidean_coords[:, :, 1] = features[:, :, 0] * torch.sin(features[:, :, 1])
+            euclidean_coords[:, :, 2] = torch.clone(features[:, :, 2])
+            points_dist = torch.norm(euclidean_coords, 2, 2, keepdim=True)
             features_ls.append(points_dist)
         features = torch.cat(features_ls, dim=-1)
 
