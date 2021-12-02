@@ -2,7 +2,6 @@ import os
 import pdb
 import numpy as np
 from cylinder_container import CylinderContainer
-from utils import Voxel
 
 """
 Utility functions for ray tracing through cylinder coordinates
@@ -25,13 +24,13 @@ def trace_cells(container, start, end, empty_cat_idx, semantic_cat_idx):
     
     Questions: how much to increase probability by for each semantic class
     """
-    dir_vec = ((end - start) / np.linalg.norm(end - start))
+    dir_vec = ((end - start) / np.linalg.norm(end - start, axis=1))
 
     points = np.array([])
     curr = start
     next_dir = dir_vec
 
-    while np.allclose(next_dir, dir_vec):
+    while np.any( np.all(np.isclose(next_dir, dir_vec), axis=1) ):
         next = (curr + dir_vec)
         next_dir = (end-next)/np.linalg.norm(end-next)
 
@@ -44,6 +43,3 @@ def trace_cells(container, start, end, empty_cat_idx, semantic_cat_idx):
         curr = next
 
     return points
-
-
-

@@ -21,13 +21,14 @@ class CylinderContainer:
         """
         Constructor that creates the cylinder coordinate container
 
-        :param grid_size: The number of cells that we want to divide each dimension of 
-                          the grid into
+        :param grid_size: 1x3 np array that represents the number of cells in the
+                          radius, azimuth, and height dimensions
         :param max_bound: [max radial distance, max_azimuth, max_height]
         :param min_bound: [min radial distance, min_azimuth, min_height]
         :param default_voxel_val: default value to initialize for each voxel
         """
         self.grid_size = grid_size
+        self.num_classes = len(default_voxel_val)
         self.max_bound = max_bound
         self.min_bound = min_bound
 
@@ -52,53 +53,71 @@ class CylinderContainer:
             return
 
         # Initialize voxel grid with float32
-        self.voxels = np.array([default_voxel_val]*(self.grid_size**3)).reshape((
-                self.grid_size, self.grid_size, self.grid_size
-        ))
+        self.voxels = np.array([default_voxel_val]*np.prod(self.grid_size)).reshape(
+                tuple(np.append(self.grid_size, [self.num_classes]))
+        )
 
         print("Initialized voxel grid with {num_cells} cells".format(
-            num_cells=self.grid_size))
+            num_cells=np.prod(self.grid_size)))
 
 
     def __len__(self):
         return self.grid_size
 
-    def __getitem__(self, input_xyz):
+    def __getitem__(self, input_xyzl):
         """
         Returns the voxel centroid that the cartesian coordinate falls in
 
         :param xyz: nx3 np array where rows are points and cols are x,y,z
         :return: nx1 np array where rows are points and col is value at each point
         """
-        return self.voxels[ self.grid_ind(input_xyz)[:,0],
-                            self.grid_ind(input_xyz)[:, 1],
-                            self.grid_ind(input_xyz)[:, 2]]
+        
+        # Reshape coordinates for 2d indexing
+        input_idxl = self.grid_ind(input_xyzl)
 
-    def __setitem__(self, input_xyz, input_value):
+        return self.voxels[ input_idxl[:, 0],
+                            input_idxl[:, 1],
+                            input_idxl[:, 2],
+                            input_idxl[:, 3] ]
+
+    def __setitem__(self, input_xyzl, input_value):
         """
         Sets the voxel to the input cell (cylindrical coordinates)
 
         :param input_xyz: nx3 np array where rows are points and cols are x,y,z
         """
-        self.voxels[self.grid_ind(input_xyz)[:,0],
-                    self.grid_ind(input_xyz)[:, 1],
-                    self.grid_ind(input_xyz)[:, 2]].set_class(input_value)
+        # Reshape coordinates for 2d indexing
+        input_idxl   = self.grid_ind(input_xyzl)
 
-    def grid_ind(self, input_xyz):
+        self.voxels[input_idxl[:,0],
+                    input_idxl[:, 1],
+                    input_idxl[:, 2],
+                    input_idxl[:, 3]] = input_value
+
+
+    def grid_ind(self, input_xyzl):
         """
         Returns index of each cartesian coordinate in grid
 
         :param input_xyz: nx3 np array where rows are points and cols are x,y,z
         :return: nx3 array where rows are points and cols are indices for that point
         """
+        input_xyzl  = input_xyzl.reshape(-1, 4)
+        input_xyz   = input_xyzl[:, 0:3]
+        labels      = input_xyzl[:, 3].reshape(-1, 1)
         xyz_pol = self.cart2polar(input_xyz)
 
-        grid_ind = (np.floor((np.clip(xyz_pol, self.min_bound, self.max_bound) 
-                    - self.min_bound) / self.intervals)).astype(np.int)
+        valid_input_mask= np.all(
+            (xyz_pol < self.max_bound) & (xyz_pol >= self.min_bound), axis=1)
+        valid_xyz_pol   = xyz_pol[valid_input_mask]
+        valid_labels    = labels[valid_input_mask]
 
+        grid_ind = (np.floor((valid_xyz_pol
+                    - self.min_bound) / self.intervals)).astype(np.int)
+        grid_ind = np.hstack( (grid_ind, valid_labels) )
         return grid_ind
 
-    def get_voxel_centers(self, input_xyz):
+    def get_voxel_centers(self, input_xyzl):
         """
         Return voxel centers corresponding to each input xyz cartesian coordinate
 
@@ -108,8 +127,13 @@ class CylinderContainer:
         """
         
         # Center data on each voxel centroid for cylindrical coordinate PTnet
-        voxel_centers = (self.grid_ind(input_xyz).astype(np.float32) + 0.5) * \
-                        self.intervals + self.min_bound
+        valid_idxl  = self.grid_ind(input_xyzl)
+        valid_idx   = valid_idxl[:, 0:3]
+        valid_labels= valid_idxl[:, 3].reshape(-1, 1)
+
+        valid_idx  = ( (valid_idx+0.5) * self.intervals ) + self.min_bound
+        voxel_centers = np.hstack( (valid_idx, valid_labels))
+
         return self.polar2cart(voxel_centers)
 
     def cart2polar(self, input_xyz):
@@ -120,12 +144,10 @@ class CylinderContainer:
 
         :return: nx3 np array where rows are points and cols are r,theta,z
         """
-        input_xyz = input_xyz.reshape(-1, 3)
+        rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2).reshape(-1, 1)
+        phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0]).reshape(-1, 1)
 
-        rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2)
-        phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0])
-
-        return np.stack((rho, phi, input_xyz[:, 2]), axis=1)
+        return np.hstack((rho, phi, input_xyz[:, 2:]))
 
 
     def polar2cart(self, input_xyz_polar):
@@ -136,9 +158,9 @@ class CylinderContainer:
 
         :return: nx3 np array where rows are points and cols are x,y,z
         """
-        x = input_xyz_polar[:, 0] * np.cos(input_xyz_polar[:, 1])
-        y = input_xyz_polar[:, 0] * np.sin(input_xyz_polar[:, 1])
+        x = (input_xyz_polar[:, 0] * np.cos(input_xyz_polar[:, 1])).reshape(-1, 1)
+        y = (input_xyz_polar[:, 0] * np.sin(input_xyz_polar[:, 1])).reshape(-1, 1)
 
-        return np.stack((x, y, input_xyz_polar[:, 2]), axis=1)
+        return np.hstack((x, y, input_xyz_polar[:, 2:]))
 
 
