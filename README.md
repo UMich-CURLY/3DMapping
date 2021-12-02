@@ -11,7 +11,7 @@ Learning to map in 3D
 ## Use 3DMapping
 ### Dependencies
 * [Pytorch](https://pytorch.org/get-started/locally/) - we tested on PyTorch 1.10 and 1.8.2
-* [SpConv](https://github.com/traveller59/spconv) - we recommend using spconv-cu113 and we found this is an issue with using spconv-cu102 and cpu version.
+* [SpConv](https://github.com/traveller59/spconv) - we recommend using `spconv-cu113` and we found this is an issue with using `spconv-cu102` and cpu version.
 * [Open3D](http://www.open3d.org/) - for visualizing map
 ### Get Started
 ### ToDo List
