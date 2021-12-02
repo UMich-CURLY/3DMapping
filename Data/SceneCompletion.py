@@ -4,7 +4,7 @@ import glob
 import numpy as np
 from numpy.lib.function_base import trim_zeros
 
-from CylinderContainer import CylinderContainer
+from Data.CylinderContainer import CylinderContainer
 from Utils import LABEL_COLORS
 
 # New
