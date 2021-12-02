@@ -51,7 +51,6 @@ class CylinderContainer:
         if (self.intervals == 0).any(): 
             print("Error zero interval detected...")
             return
-
         # Initialize voxel grid with float32
         self.voxels = np.array([default_voxel_val]*np.prod(self.grid_size)).reshape(
                 tuple(np.append(self.grid_size, [self.num_classes]))
@@ -63,6 +62,12 @@ class CylinderContainer:
 
     def __len__(self):
         return self.grid_size
+
+    def get_voxels(self):
+        """
+        Returns an instance of the voxels grid
+        """
+        return self.voxels
 
     def __getitem__(self, input_xyzl):
         """

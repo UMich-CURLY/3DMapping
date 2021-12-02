@@ -1,5 +1,6 @@
 import os
 import pdb
+import sys
 import time
 import random
 import numpy as np
@@ -8,9 +9,9 @@ from numpy.core.fromnumeric import trace
 from numpy.random.mtrand import rand
 from mpl_toolkits.mplot3d import Axes3D
 
-from cylinder_container import CylinderContainer
-from trace import trace_cells
-from utils import cat_idx_dict
+sys.path.append('../')
+from CylinderContainer import CylinderContainer
+from Utils import CAT_IDX_MAP
 
 """
 Driver file for loading data into cylindrical coordinate voxels
@@ -64,18 +65,18 @@ def main():
     fig = plot_points(random_points)
 
     # Visualize points mapped to centroid
-    pdb.set_trace()
     voxel_centers = cells.get_voxel_centers(random_points)
+
+    voxels = cells.get_voxels()
 
     fig = plot_points(voxel_centers, fig, 'x', (0, 0, 1))
 
-    # Center of coordinate system 
-    # points = np.array([[-1, 0, 0, 1], [1, 0, 2, 1]])
-    
-    # pdb.set_trace()
-    # cells[points] += 1
+    # Tests valid voxels
+    points = np.array([[-1, 0, 0, 1], [1, 0, 2, 1]])
+    cells[points] += 1
 
-    # pdb.set_trace()
+    valid_voxels = np.sum(voxels, axis=3) > 0
+    
     plt.show()
 
 
