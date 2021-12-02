@@ -25,7 +25,7 @@ class CylinderContainer:
                           radius, azimuth, and height dimensions
         :param max_bound: [max radial distance, max_azimuth, max_height]
         :param min_bound: [min radial distance, min_azimuth, min_height]
-        :param default_voxel_val: default value to initialize for each voxel
+        :param default_voxel_val: default object to initialize for each voxel cell
         """
         self.grid_size = grid_size
         self.num_classes = len(default_voxel_val)
@@ -73,7 +73,8 @@ class CylinderContainer:
         """
         Returns the voxel centroid that the cartesian coordinate falls in
 
-        :param xyz: nx3 np array where rows are points and cols are x,y,z
+        :param input_xyzl:  nx4 np array where rows are points and cols are x,y,z 
+                            and last col is semantic label idx
         :return: nx1 np array where rows are points and col is value at each point
         """
         
@@ -89,7 +90,9 @@ class CylinderContainer:
         """
         Sets the voxel to the input cell (cylindrical coordinates)
 
-        :param input_xyz: nx3 np array where rows are points and cols are x,y,z
+        :param input_xyzl:  nx4 np array where rows are points and cols are x,y,z 
+                            and last col is semantic label idx
+        :param input_value: scalar value for how much to increment cell by
         """
         # Reshape coordinates for 2d indexing
         input_idxl   = self.grid_ind(input_xyzl)
@@ -104,8 +107,10 @@ class CylinderContainer:
         """
         Returns index of each cartesian coordinate in grid
 
-        :param input_xyz: nx3 np array where rows are points and cols are x,y,z
-        :return: nx3 array where rows are points and cols are indices for that point
+        :param input_xyz:   nx4 np array where rows are points and cols are x,y,z 
+                            and last col is semantic label idx
+        :return:    nx4 np array where rows are points and cols are x,y,z 
+                    and last col is semantic label idx
         """
         input_xyzl  = input_xyzl.reshape(-1, 4)
         input_xyz   = input_xyzl[:, 0:3]
@@ -126,9 +131,11 @@ class CylinderContainer:
         """
         Return voxel centers corresponding to each input xyz cartesian coordinate
 
-        :param input_xyz: nx3 np array where rows are points and cols are x,y,z
+        :param input_xyzl:  nx4 np array where rows are points and cols are x,y,z 
+                            and last col is semantic label idx
 
-        :return:  nx3 np array where rows are points and cols are x, y, z
+        :return:    nx4 np array where rows are points and cols are x,y,z 
+                    and last col is semantic label idx
         """
         
         # Center data on each voxel centroid for cylindrical coordinate PTnet
@@ -145,9 +152,11 @@ class CylinderContainer:
         """
         Converts cartesian to polar coordinates
 
-        :param input_xyz_polar:  nx3 np array where rows are points and cols are x,y,z
+        :param input_xyz_polar: nx3 or 4 np array where rows are points and cols are x,y,z 
+                                and last col is semantic label idx
 
-        :return: nx3 np array where rows are points and cols are r,theta,z
+        :return:    size of input np array where rows are points and cols are r,theta,z, 
+                    label (optional)
         """
         rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2).reshape(-1, 1)
         phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0]).reshape(-1, 1)
@@ -159,9 +168,11 @@ class CylinderContainer:
         """
         Converts polar to cartesian coordinates
 
-        :param input_xyz_polar: nx3 np array where rows are points and cols are r,theta,z
+        :param input_xyz_polar: nx3 or 4 np array where rows are points and cols 
+                                are r,theta,z
 
-        :return: nx3 np array where rows are points and cols are x,y,z
+        :return:    nx3 or 4 np array where rows are points and cols are 
+                    x,y,z,label (optional)
         """
         x = (input_xyz_polar[:, 0] * np.cos(input_xyz_polar[:, 1])).reshape(-1, 1)
         y = (input_xyz_polar[:, 0] * np.sin(input_xyz_polar[:, 1])).reshape(-1, 1)
