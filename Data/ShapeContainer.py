@@ -1,34 +1,27 @@
 import os
-import pdb
 import numpy as np
-import yaml
 
 """
-    Cylinder Container takes a cartesian xyz coordinate and 
-    allows users to access which cell it is in for cylindrical coordinates
-
-    The cell volume can be configured using the cell size ctor arg
-    The total volume of the cylinder cells can be set using the grid size ctor arg
-
-    Source Code Referenced From: 
-    https://github.com/xinge008/Cylinder3D/blob/cc2116c8cb99b8c23c186691f344b1d95ee0d04f/dataloader/dataset_nuscenes.py#L99-L111
+    Generic Volumetric container
 """
-class CylinderContainer:
+class ShapeContainer:
     def __init__(self, grid_size,
-        min_bound=np.array([0, -2.0*np.pi, 0], dtype=np.float32),
-        max_bound=np.array([20, 2.0*np.pi, 10], dtype=np.float32),
-        default_voxel_val= 0 ):
+        min_bound=np.array([0, -1.0*np.pi, 0], dtype=np.float32),
+        max_bound=np.array([20, 1.0*np.pi, 10], dtype=np.float32),
+        num_channels=25,
+        coordinates="cylindrical"):
         """
-        Constructor that creates the cylinder coordinate container
+        Constructor that creates the cylinder volume container
 
-        :param grid_size: 1x3 np array that represents the number of cells in the
-                          radius, azimuth, and height dimensions
-        :param max_bound: [max radial distance, max_azimuth, max_height]
-        :param min_bound: [min radial distance, min_azimuth, min_height]
-        :param default_voxel_val: default object to initialize for each voxel cell
+        :param grid_size: 1x3 np array that represents the number of cells in each dimension
+        :param max_bound: [max in 3 dimensions]
+        :param min_bound: [min in 3 dimensions]
+        :param num_channels: number of semantic channels
         """
+        self.coordinates = coordinates
+        
         self.grid_size = grid_size
-        self.num_classes = len(default_voxel_val)
+        self.num_classes = num_channels
         self.max_bound = max_bound
         self.min_bound = min_bound
 
@@ -36,9 +29,9 @@ class CylinderContainer:
         self.intervals = None
         self.voxels = None
 
-        self.reset_grid(default_voxel_val)
+        self.reset_grid()
 
-    def reset_grid(self, default_voxel_val):
+    def reset_grid(self):
         """
         Recomputes voxel grid and intializes all values to 0
 
@@ -52,9 +45,7 @@ class CylinderContainer:
             print("Error zero interval detected...")
             return
         # Initialize voxel grid with float32
-        self.voxels = np.array([default_voxel_val]*np.prod(self.grid_size)).reshape(
-                tuple(np.append(self.grid_size, [self.num_classes]))
-        )
+        self.voxels = np.zeros(list(self.grid_size.astype(np.uint32)) + [self.num_classes])
 
         print("Initialized voxel grid with {num_cells} cells".format(
             num_cells=np.prod(self.grid_size)))
@@ -73,18 +64,19 @@ class CylinderContainer:
         """
         Returns the voxel centroid that the cartesian coordinate falls in
 
-        :param input_xyzl:  nx4 np array where rows are points and cols are x,y,z 
+        :param input_xyzl:  nx4 np array where rows are points and cols are x,y,z
                             and last col is semantic label idx
         :return: nx1 np array where rows are points and col is value at each point
         """
         
         # Reshape coordinates for 2d indexing
-        input_idxl = self.grid_ind(input_xyzl)
+        input_idxl = self.grid_ind(input_xyzl).astype(int)
 
-        return self.voxels[ input_idxl[:, 0],
-                            input_idxl[:, 1],
-                            input_idxl[:, 2],
-                            input_idxl[:, 3] ]
+        return self.voxels[ list(input_idxl[:, 0]),
+                            list(input_idxl[:, 1]),
+                            list(input_idxl[:, 2]),
+                            list(input_idxl[:, 3])
+                        ]
 
     def __setitem__(self, input_xyzl, input_value):
         """
@@ -95,7 +87,7 @@ class CylinderContainer:
         :param input_value: scalar value for how much to increment cell by
         """
         # Reshape coordinates for 2d indexing
-        input_idxl   = self.grid_ind(input_xyzl)
+        input_idxl = self.grid_ind(input_xyzl).astype(int)
 
         self.voxels[input_idxl[:,0],
                     input_idxl[:, 1],
@@ -115,7 +107,8 @@ class CylinderContainer:
         input_xyzl  = input_xyzl.reshape(-1, 4)
         input_xyz   = input_xyzl[:, 0:3]
         labels      = input_xyzl[:, 3].reshape(-1, 1)
-        xyz_pol = self.cart2polar(input_xyz)
+        
+        xyz_pol = self.cart2grid(input_xyz)
 
         valid_input_mask= np.all(
             (xyz_pol < self.max_bound) & (xyz_pol >= self.min_bound), axis=1)
@@ -146,11 +139,11 @@ class CylinderContainer:
         valid_idx  = ( (valid_idx+0.5) * self.intervals ) + self.min_bound
         voxel_centers = np.hstack( (valid_idx, valid_labels))
 
-        return self.polar2cart(voxel_centers)
+        return self.grid2cart(voxel_centers)
 
-    def cart2polar(self, input_xyz):
+    def cart2grid(self, input_xyz):
         """
-        Converts cartesian to polar coordinates
+        Converts cartesian to grid's coordinates system
 
         :param input_xyz_polar: nx3 or 4 np array where rows are points and cols are x,y,z 
                                 and last col is semantic label idx
@@ -158,15 +151,18 @@ class CylinderContainer:
         :return:    size of input np array where rows are points and cols are r,theta,z, 
                     label (optional)
         """
-        rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2).reshape(-1, 1)
-        phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0]).reshape(-1, 1)
+        if self.coordinates == "cylindrical":
+            rho = np.sqrt(input_xyz[:, 0] ** 2 + input_xyz[:, 1] ** 2).reshape(-1, 1)
+            phi = np.arctan2(input_xyz[:, 1], input_xyz[:, 0]).reshape(-1, 1)
 
-        return np.hstack((rho, phi, input_xyz[:, 2:]))
+            return np.hstack((rho, phi, input_xyz[:, 2:]))
+        else:
+            return input_xyz
 
 
-    def polar2cart(self, input_xyz_polar):
+    def grid2cart(self, input_xyz_polar):
         """
-        Converts polar to cartesian coordinates
+        Converts grid to cartesian coordinates
 
         :param input_xyz_polar: nx3 or 4 np array where rows are points and cols 
                                 are r,theta,z
@@ -174,9 +170,12 @@ class CylinderContainer:
         :return:    nx3 or 4 np array where rows are points and cols are 
                     x,y,z,label (optional)
         """
-        x = (input_xyz_polar[:, 0] * np.cos(input_xyz_polar[:, 1])).reshape(-1, 1)
-        y = (input_xyz_polar[:, 0] * np.sin(input_xyz_polar[:, 1])).reshape(-1, 1)
+        if self.coordinates == "cylindrical":
+            x = (input_xyz_polar[:, 0] * np.cos(input_xyz_polar[:, 1])).reshape(-1, 1)
+            y = (input_xyz_polar[:, 0] * np.sin(input_xyz_polar[:, 1])).reshape(-1, 1)
 
-        return np.hstack((x, y, input_xyz_polar[:, 2:]))
+            return np.hstack((x, y, input_xyz_polar[:, 2:]))
+        else:
+            return input_xyz_polar
 
 

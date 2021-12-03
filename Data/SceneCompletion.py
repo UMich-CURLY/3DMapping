@@ -4,29 +4,17 @@ import glob
 import numpy as np
 from numpy.lib.function_base import trim_zeros
 
-from Data.CylinderContainer import CylinderContainer
+from ShapeContainer import ShapeContainer
 from Utils import LABEL_COLORS
 
 # New
-def initialize_grid(grid_lengths = np.array([40.0, 40.0, 4.0]), 
-                    voxel_resolution = 0.2,
-                    num_classes = 25):
-    # Load grid settings
-    grid_lengths = np.array([40.0, 40.0, 4.0]) # xyz dims
-    grid_dim = 2 * grid_lengths / voxel_resolution
-    grid_dim = np.array([
-        int(grid_dim[0]), int(grid_dim[1]), int(grid_dim[2]), num_classes]) # 0 is free
-    print(grid_dim)
-
-    # Cylinder cells
-    cells_per_dim = grid_dim[0:3]
-
-    min_bound = np.array([-grid_lengths[0], -2.0*np.pi, -grid_lengths[2]])
-    max_bound = np.array([grid_lengths[0], 2.0*np.pi, grid_lengths[2]])
-    default_voxel = np.array([0]*num_classes, dtype=np.uint8)
-
-    cylinder_mat = CylinderContainer(   cells_per_dim, min_bound, max_bound, 
-                                        default_voxel_val=default_voxel)
+def initialize_grid(grid_size=np.array([100., 100., 10.]),
+        min_bound=np.array([0, -1.0*np.pi, 0], dtype=np.float32),
+        max_bound=np.array([20, 1.0*np.pi, 10], dtype=np.float32),
+        num_channels=25,
+        coordinates="cylindrical"):
+        
+    cylinder_mat = ShapeContainer(grid_size, min_bound, max_bound, num_channels, coordinates)
     return cylinder_mat
 
 # Original
@@ -48,7 +36,6 @@ def load_times(seq_dir, t_start, t_end, dt, save_dir):
     t_from.close()
 
     times = np.array(times)
-    print(times)
     np.savetxt(save_dir + 'times.txt', times)
 
     return times
@@ -113,8 +100,6 @@ def save_labels(view_num, query, save_dir, seq_dir, t_start, t_end):
         if frame_str:
             label = np.load(seq_dir + "labels" + str(view_num) + "/" + label_file)
             label.astype('uint32').tofile(to_folder + frame_str + ".label")
-            values, counts = np.unique(label, return_counts=True)
-            print(values, counts)
 
 # Labels
 def save_points(view_num, query, save_dir, seq_dir, t_start, t_end):
@@ -171,6 +156,7 @@ def get_inv_transforms(sensors, seq_dir, t_start, t_end):
             ego_pose = np.load(seq_dir + "pose0/" + pose_file)
             for sensor in sensors:
                 sensor_pose = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
+                print(sensor_pose)
                 inv_sensor = np.linalg.inv(sensor_pose)
                 inv_transforms[sensor] = np.matmul(ego_pose, inv_sensor)
     return inv_transforms
@@ -178,11 +164,11 @@ def get_inv_transforms(sensors, seq_dir, t_start, t_end):
 # Add points to cylinder grid
 def add_points(points, labels, grid):
     pointlabels = np.hstack((points, labels))
-    
-    grid[pointlabels] += 1
+    grid[pointlabels] = grid[pointlabels] + 1
+    return grid
 
 # Add points along ray to grid
-def ray_trace(point, label, grid, sample_spacing):
+def ray_trace(point, label, sample_spacing):
     vec_norm = np.linalg.norm(point)
     vec_angle = point / vec_norm
     # Iterate from lidar outwards to preserve even spacing between points
@@ -191,23 +177,25 @@ def ray_trace(point, label, grid, sample_spacing):
     labels = [0] * new_points.shape[0]
     # End Point is label, free points all 0
     labels[0] = label
-    add_points(new_points, labels, grid)
+    return new_points, np.asarray(labels).reshape(-1, 1)
 
 def main():
     """
     Initialize settings and data structures
     """
-    t_start = 16650
-    t_end = 17000
+    t_start = 350
+    t_end = 400
     dt = 0.1
-    seq_dir = "02/"
-    save_dir = "02_processed/"
+    seq_dir = "Scenes/02/"
+    save_dir = "Scenes/02/02_processed/"
+    free_res = 1.5
 
     # Initialize grid
-    grid_lengths = np.array([40.0, 40.0, 4.0])
-    voxel_resolution = 0.2
-    num_classes = 25
-    voxel_grid = initialize_grid(grid_lengths, voxel_resolution, num_classes)
+    voxel_grid = initialize_grid(grid_size=np.array([100., 100., 10.]),
+        min_bound=np.array([0, -1.0*np.pi, 0], dtype=np.float32),
+        max_bound=np.array([20, 1.0*np.pi, 10], dtype=np.float32),
+        num_channels=25,
+        coordinates="cylindrical")
 
     # Load sensors data
     if not os.path.exists(save_dir):
@@ -221,13 +209,11 @@ def main():
         print("Error: less than one sensor found, exiting...")
         return
 
+
+    # Input data
     times = load_times(seq_dir, t_start, t_end, dt, save_dir)
-
-    poses, sorted_poses_all, inv_first = \
-        load_poses(sensors, save_dir, seq_dir, t_start, t_end)
-
+    poses, sorted_poses_all, inv_first = load_poses(sensors, save_dir, seq_dir, t_start, t_end)
     save_labels(0, False, save_dir, seq_dir, t_start, t_end)
-
     save_points(0, False, save_dir, seq_dir, t_start, t_end)
 
     # Get transforms from lidars to ego sensor
@@ -237,12 +223,6 @@ def main():
     if not os.path.exists(save_dir + "evaluation"):
         os.mkdir(save_dir + "evaluation")
 
-    # Generate voxel grid from data
-    x = np.arange(-grid_lengths[0], grid_lengths[0], voxel_resolution) + voxel_resolution/2
-    y = np.arange(-grid_lengths[1], grid_lengths[1], voxel_resolution) + voxel_resolution/2
-    z = np.arange(-grid_lengths[2], grid_lengths[2], voxel_resolution) + voxel_resolution/2
-    xv, yv, zv = np.meshgrid(x, y, z)
-
     for pose_file in os.listdir(seq_dir + "pose0"):
         t_frame = pose_file.split(".")[0]
         frame_str = get_frame_str(t_frame, t_start, t_end)
@@ -250,22 +230,28 @@ def main():
         if frame_str:
             for sensor in sensors:
                 [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
-                transformed_points = np.matmul(points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
-                transformed_points = transformed_points + inv_transforms[sensor][3, :3]
-                for i in range(transformed_points.shape[0]):
-                    ray_trace(transformed_points[i, :], label[i], voxel_grid, voxel_resolution)
+                # for i in range(points.shape[0]):
+                for i in range(1000):
+                    temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
+                    transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
+                    print(inv_transforms[sensor][3, :3])
+                    transformed_points = transformed_points + inv_transforms[sensor][3, :3]
+                    voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
+                    break
+                    
             # Save
-            valid_cells = np.sum(voxel_grid, axis=3) > 0
-            labels = np.argmax(voxel_grid, axis=3)
+            
+            valid_cells = np.sum(voxel_grid.get_voxels(), axis=3) > 0
+            labels = np.argmax(voxel_grid.get_voxels(), axis=3)
             values, counts = np.unique(labels[valid_cells], return_counts=True)
             print(frame_str, values, counts)
-            valid_x = xv[valid_cells]
-            valid_y = yv[valid_cells]
-            valid_z = zv[valid_cells]
-            valid_points = np.stack((valid_x, valid_y, valid_z)).T
-            valid_labels = labels[valid_cells]
-            valid_points.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
-            valid_labels.astype('uint32').tofile(save_dir + "/evaluation/" + frame_str + ".label")
+#            valid_x = xv[valid_cells]
+#            valid_y = yv[valid_cells]
+#            valid_z = zv[valid_cells]
+#            valid_points = np.stack((valid_x, valid_y, valid_z)).T
+#            valid_labels = labels[valid_cells]
+#            valid_points.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
+#            valid_labels.astype('uint32').tofile(save_dir + "/evaluation/" + frame_str + ".label")
 
 
 if __name__ == '__main__':
