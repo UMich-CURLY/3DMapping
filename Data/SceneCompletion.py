@@ -3,6 +3,7 @@ import pdb
 import glob
 import numpy as np
 from numpy.lib.function_base import trim_zeros
+import json
 
 from ShapeContainer import ShapeContainer
 from Utils import LABEL_COLORS
@@ -182,25 +183,43 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 250
-    t_end = 300
+    t_start = 400
+    t_end = 500
     dt = 0.1
     seq_dir = "Scenes/03/03/"
     save_dir = "Scenes/03/03_processed/"
     free_res = 1.5
+    
+    # Parameters for container: cylindrical
+    grid_size = np.array([100., 100., 10.])
+    min_bound = np.array([0, -1.0*np.pi, 0], dtype=np.float32)
+    max_bound = np.array([20, 1.0*np.pi, 10], dtype=np.float32)
+    num_channels = 25
+    coordinates = "cylindrical"
+    
+    # Parameters for container: cartesian
+#    grid_size = np.array([100., 100., 10.])
+#    min_bound = np.array([-20, -20, -2.5], dtype=np.float32)
+#    max_bound = np.array([20, 20, 2.5], dtype=np.float32)
+#    num_channels = 25
+#    coordinates = "cartesian"
 
     # Initialize grid
-    voxel_grid = initialize_grid(grid_size=np.array([100., 100., 10.]),
-        min_bound=np.array([0, -1.0*np.pi, 0], dtype=np.float32),
-        max_bound=np.array([20, 1.0*np.pi, 10], dtype=np.float32),
-        num_channels=25,
-        coordinates="cylindrical")
+    voxel_grid = initialize_grid(grid_size=grid_size,
+        min_bound=min_bound,
+        max_bound=max_bound,
+        num_channels=num_channels,
+        coordinates=coordinates)
         
-#    voxel_grid = initialize_grid(grid_size=np.array([100., 100., 10.]),
-#        min_bound=np.array([-20, -20, -2.5], dtype=np.float32),
-#        max_bound=np.array([20, 20, 2.5], dtype=np.float32),
-#        num_channels=25,
-#        coordinates="cartesian")
+    # Save params
+    params = {  "grid_size": grid_size.tolist(),
+                "min_bound": min_bound.tolist(),
+                "max_bound": max_bound.tolist(),
+                "num_channels": num_channels,
+                "coordinates": coordinates
+    }
+    with open(save_dir + "/evaluation/params.json", "w") as f:
+        json.dump(params, f)
 
     # Load sensors data
     if not os.path.exists(save_dir):
@@ -228,13 +247,14 @@ def main():
     if not os.path.exists(save_dir + "evaluation"):
         os.mkdir(save_dir + "evaluation")
 
+    # Loop over frames
     for i in range(t_start, t_end):
         voxel_grid.reset_grid()
         t_frame = str(i)
         frame_str = get_frame_str(t_frame, t_start, t_end)
 
         if frame_str:
-            for sensor in sensors[1:]:
+            for sensor in sensors:
                 [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
                 for i in range(points.shape[0]):
                     temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
@@ -242,18 +262,10 @@ def main():
                     transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
                     voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
                     
-            # Save
-            valid_cells = np.sum(voxel_grid.get_voxels(), axis=3) > 0
-            labels = np.argmax(voxel_grid.get_voxels(), axis=3)
-            values, counts = np.unique(labels[valid_cells], return_counts=True)
-            print(frame_str, values, counts)
-#            valid_x = xv[valid_cells]
-#            valid_y = yv[valid_cells]
-#            valid_z = zv[valid_cells]
-#            valid_points = np.stack((valid_x, valid_y, valid_z)).T
-#            valid_labels = labels[valid_cells]
-#            valid_points.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
-#            valid_labels.astype('uint32').tofile(save_dir + "/evaluation/" + frame_str + ".label")
+            # Save volume
+            voxels = voxel_grid.get_voxels()
+            print(voxels.shape)
+            voxels.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
 
 
 if __name__ == '__main__':
