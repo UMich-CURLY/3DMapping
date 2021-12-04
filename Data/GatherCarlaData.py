@@ -38,6 +38,7 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
     data = np.frombuffer(point_cloud.raw_data, dtype=np.dtype([
         ('x', np.float32), ('y', np.float32), ('z', np.float32),
         ('CosAngle', np.float32), ('ObjIdx', np.uint32), ('ObjTag', np.uint32)]))
+    print(lidar_id, view)
 
     non_ego = np.array(data['ObjIdx']) != vehicle_id
 
@@ -140,7 +141,7 @@ def main(arg):
         vehicle.set_autopilot(True)
 
         # Create semantic lidar
-        NUM_SENSORS = 20
+        NUM_SENSORS = 5
         views = np.arange(NUM_SENSORS)
         lidars = []
         for i in range(NUM_SENSORS):
@@ -161,10 +162,19 @@ def main(arg):
             lidar_transform = carla.Transform(carla.Location(x=offsets[0], y=offsets[1], z=offsets[2]) + user_offset)
             lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
             lidars.append(lidar)
-            print(lidar_transform)
             # Add callback
-            lidar.listen(lambda data, view=views[i]:
-                         semantic_lidar_callback(data, world, lidar.id, vehicle.id, arg["storage_dir"], view=view))
+
+        # FOR LOOP Breaks
+        lidars[0].listen(lambda data, view=views[0]:
+                semantic_lidar_callback(data, world, lidars[0].id, vehicle.id, arg["storage_dir"], view=view))
+        lidars[1].listen(lambda data, view=views[1]:
+                semantic_lidar_callback(data, world, lidars[1].id, vehicle.id, arg["storage_dir"], view=view))
+        lidars[2].listen(lambda data, view=views[2]:
+                semantic_lidar_callback(data, world, lidars[2].id, vehicle.id, arg["storage_dir"], view=view))
+        lidars[3].listen(lambda data, view=views[3]:
+                semantic_lidar_callback(data, world, lidars[3].id, vehicle.id, arg["storage_dir"], view=view))
+        lidars[4].listen(lambda data, view=views[4]:
+                semantic_lidar_callback(data, world, lidars[4].id, vehicle.id, arg["storage_dir"], view=view))
 
         # # Create semantic lidar number two (different view)
         # lidar_bp2 = generate_lidar_bp(arg, world, blueprint_library, delta)
@@ -213,7 +223,7 @@ if __name__ == "__main__":
         "range": 50,
         "points_per_second": 500000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/02"
+        "storage_dir": "/home/tigeriv/Data/Carla/03"
     }
 
     try:
