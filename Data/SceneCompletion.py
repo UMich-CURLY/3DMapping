@@ -156,7 +156,6 @@ def get_inv_transforms(sensors, seq_dir, t_start, t_end):
             ego_pose = np.load(seq_dir + "pose0/" + pose_file)
             for sensor in sensors:
                 sensor_pose = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
-                print(sensor_pose)
                 inv_sensor = np.linalg.inv(sensor_pose)
                 inv_transforms[sensor] = np.matmul(ego_pose, inv_sensor)
     return inv_transforms
@@ -171,8 +170,8 @@ def add_points(points, labels, grid):
 def ray_trace(point, label, sample_spacing):
     vec_norm = np.linalg.norm(point)
     vec_angle = point / vec_norm
-    # Iterate from lidar outwards to preserve even spacing between points
-    dists = np.arange(0, vec_norm, sample_spacing)
+    # Iterate from sample inwards
+    dists = np.arange(vec_norm, 0, -sample_spacing)
     new_points = np.reshape(dists, (-1, 1)) * np.reshape(vec_angle, (1, 3))
     labels = [0] * new_points.shape[0]
     # End Point is label, free points all 0
@@ -183,11 +182,11 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 350
-    t_end = 400
+    t_start = 250
+    t_end = 300
     dt = 0.1
-    seq_dir = "Scenes/02/"
-    save_dir = "Scenes/02/02_processed/"
+    seq_dir = "Scenes/03/03/"
+    save_dir = "Scenes/03/03_processed/"
     free_res = 1.5
 
     # Initialize grid
@@ -196,6 +195,12 @@ def main():
         max_bound=np.array([20, 1.0*np.pi, 10], dtype=np.float32),
         num_channels=25,
         coordinates="cylindrical")
+        
+#    voxel_grid = initialize_grid(grid_size=np.array([100., 100., 10.]),
+#        min_bound=np.array([-20, -20, -2.5], dtype=np.float32),
+#        max_bound=np.array([20, 20, 2.5], dtype=np.float32),
+#        num_channels=25,
+#        coordinates="cartesian")
 
     # Load sensors data
     if not os.path.exists(save_dir):
@@ -223,24 +228,21 @@ def main():
     if not os.path.exists(save_dir + "evaluation"):
         os.mkdir(save_dir + "evaluation")
 
-    for pose_file in os.listdir(seq_dir + "pose0"):
-        t_frame = pose_file.split(".")[0]
+    for i in range(t_start, t_end):
+        voxel_grid.reset_grid()
+        t_frame = str(i)
         frame_str = get_frame_str(t_frame, t_start, t_end)
 
         if frame_str:
-            for sensor in sensors:
+            for sensor in sensors[1:]:
                 [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
-                # for i in range(points.shape[0]):
-                for i in range(1000):
+                for i in range(points.shape[0]):
                     temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
                     transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
-                    print(inv_transforms[sensor][3, :3])
-                    transformed_points = transformed_points + inv_transforms[sensor][3, :3]
+                    transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
                     voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
-                    break
                     
             # Save
-            
             valid_cells = np.sum(voxel_grid.get_voxels(), axis=3) > 0
             labels = np.argmax(voxel_grid.get_voxels(), axis=3)
             values, counts = np.unique(labels[valid_cells], return_counts=True)
