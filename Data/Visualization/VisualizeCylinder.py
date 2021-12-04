@@ -1,9 +1,11 @@
 import open3d as o3d
 import time
 import numpy as np
+import os
+import json
 
 LABEL_COLORS = np.array([
-    (255, 255, 255), # None
+    (0, 0, 0), # None
     (70, 70, 70),    # Building
     (100, 40, 40),   # Fences
     (55, 90, 80),    # Other
@@ -29,8 +31,8 @@ LABEL_COLORS = np.array([
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
 
 # container should be a C x R x T x Z numpy array containing class probabilities that sum to 1 over the channel dimension
-# min dim should be the lower bound on the axis (e.g. [0, 0, 0, 0])
-# max dim should be the upper bound on the axis (e.g. [20, 25, 2*pi, 50]) for a full cylinder of radius 25 and height 50
+# min dim should be the lower bound on the axis (e.g. [0, 0, 0])
+# max dim should be the upper bound on the axis (e.g. [25, 2*pi, 50]) for a full cylinder of radius 25 and height 50
 def vis_cyl(container, min_dim, max_dim, num_samples): 
     # Create visualizer 
     point_list = o3d.geometry.PointCloud()
@@ -46,9 +48,9 @@ def vis_cyl(container, min_dim, max_dim, num_samples):
     vis.get_render_option().show_coordinate_frame = True
 
     # compute steps
-    r_step = (max_dim[1] - min_dim[1])/container.shape[1]
-    t_step = (max_dim[2] - min_dim[2])/container.shape[2]
-    z_step = (max_dim[3] - min_dim[3])/container.shape[3]
+    r_step = (max_dim[0] - min_dim[0])/container.shape[0]
+    t_step = (max_dim[1] - min_dim[1])/container.shape[1]
+    z_step = (max_dim[2] - min_dim[2])/container.shape[2]
 
     points_raw = []
     colors_raw = []
@@ -58,9 +60,9 @@ def vis_cyl(container, min_dim, max_dim, num_samples):
         cell = [np.random.randint(0, i) for i in container.shape]
 
         # determine the cylindrical bounds on that cell
-        r_bound = [min_dim[1] + r_step * cell[1], min_dim[1] + r_step * (cell[1] + 1)]
-        t_bound = [min_dim[2] + t_step * cell[2], min_dim[2] + t_step * (cell[2] + 1)]
-        z_bound = [min_dim[3] + z_step * cell[3], min_dim[3] + z_step * (cell[3] + 1)]
+        r_bound = [min_dim[0] + r_step * cell[1], min_dim[0] + r_step * (cell[1] + 1)]
+        t_bound = [min_dim[1] + t_step * cell[2], min_dim[1] + t_step * (cell[2] + 1)]
+        z_bound = [min_dim[2] + z_step * cell[3], min_dim[2] + z_step * (cell[3] + 1)]
 
         # sample a random cylindrical coordinate from the cell 
         r = np.random.uniform(r_bound[0], r_bound[1])
@@ -68,8 +70,8 @@ def vis_cyl(container, min_dim, max_dim, num_samples):
         z = np.random.uniform(z_bound[0], z_bound[1])
 
         # choose a class based on class probabilities 
-        p = list(container[:, cell[1], cell[2], cell[3]]) # distribution over classes
-        c = np.random.choice(container.shape[0], 1, p=p)[0]
+        p = np.array(container[:, cell[1], cell[2], cell[3]]) # distribution over classes
+        c = np.random.choice(container.shape[0], 1, p=p/p.sum())[0]
 
         # convert coordinate to cartesian 
         x = r * np.cos(t)
@@ -77,7 +79,11 @@ def vis_cyl(container, min_dim, max_dim, num_samples):
 
         # add to point lists
         points_raw.append([x, y, z])
-        colors_raw.append(list(LABEL_COLORS[c]))
+        try:
+            colors_raw.append(list(LABEL_COLORS[c]))
+        except:
+            c = 0
+            colors_raw.append(list(LABEL_COLORS[c]))
     
     points = np.array(points_raw)
     colors = np.array(colors_raw)
@@ -96,7 +102,20 @@ def vis_cyl(container, min_dim, max_dim, num_samples):
 
 
 # test code
-c = np.zeros((20, 100, 100, 100))
-c[0, :, :, :] = 0.8
-c[4, :, :, :] = 0.2
-vis_cyl(c, [0, 0, 0, 0], [20, 50, 2*np.pi, 50], 1000)
+if __name__ == "__main__":
+    load_dir = "../Scenes/03/03_processed/evaluation/"
+    # Load params
+    with open(load_dir + "params.json") as f:
+        params = json.load(f)
+        grid_shape = [params["num_channels"]] + list(params["grid_size"])
+        grid_shape = [int(i) for i in grid_shape]
+        min_dim = params["min_bound"]
+        max_dim = params["max_bound"]
+    # Load frames
+    for frame in os.listdir(load_dir):
+        if not frame.endswith("bin"):
+            continue
+        c = np.fromfile(load_dir + frame, dtype="float32").reshape(grid_shape)
+        c[0, :, :, :] += 1e-6
+        c = c / np.sum(c, axis=0)
+        vis_cyl(c, min_dim, max_dim, 1000000)
