@@ -264,6 +264,7 @@ def main():
                     
             # Save volume
             voxels = voxel_grid.get_voxels()
+            voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
             print(voxels.shape)
             voxels.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
 
