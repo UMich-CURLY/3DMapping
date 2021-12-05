@@ -3,6 +3,7 @@ import time
 import numpy as np
 import os
 import json
+import pdb
 
 LABEL_COLORS = np.array([
     (0, 0, 0), # None
@@ -30,80 +31,64 @@ LABEL_COLORS = np.array([
     (145, 170, 100), # Terrain
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
 
-# container should be a C x R x T x Z numpy array containing class probabilities that sum to 1 over the channel dimension
-# min dim should be the lower bound on the axis (e.g. [0, 0, 0])
-# max dim should be the upper bound on the axis (e.g. [25, 2*pi, 50]) for a full cylinder of radius 25 and height 50
-def vis_cyl(container, min_dim, max_dim, num_samples): 
-    # Create visualizer 
-    point_list = o3d.geometry.PointCloud()
-    vis = o3d.visualization.Visualizer()
-    vis.create_window(
-        window_name='Segmented Scene',
-        width=960,
-        height=540,
-        left=480,
-        top=270)
-    vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-    vis.get_render_option().point_size = 3
-    vis.get_render_option().show_coordinate_frame = True
+# vectorized point generation
+def gen_points(container, min_dim, max_dim,  num_samples, vis):
+    """
+        min_dim     -
+        max_dim     -
+        steps       1x3
+        c
+    """
 
-    # compute steps
-    r_step = (max_dim[0] - min_dim[0])/container.shape[0]
-    t_step = (max_dim[1] - min_dim[1])/container.shape[1]
-    z_step = (max_dim[2] - min_dim[2])/container.shape[2]
-
-    points_raw = []
-    colors_raw = []
-
-    for i in range(0, num_samples):
-        # pick a random cell in the container
-        cell = [np.random.randint(0, i) for i in container.shape]
-
-        # determine the cylindrical bounds on that cell
-        r_bound = [min_dim[0] + r_step * cell[1], min_dim[0] + r_step * (cell[1] + 1)]
-        t_bound = [min_dim[1] + t_step * cell[2], min_dim[1] + t_step * (cell[2] + 1)]
-        z_bound = [min_dim[2] + z_step * cell[3], min_dim[2] + z_step * (cell[3] + 1)]
-
-        # sample a random cylindrical coordinate from the cell 
-        r = np.random.uniform(r_bound[0], r_bound[1])
-        t = np.random.uniform(t_bound[0], t_bound[1])
-        z = np.random.uniform(z_bound[0], z_bound[1])
-
-        # choose a class based on class probabilities 
-        p = np.array(container[:, cell[1], cell[2], cell[3]]) # distribution over classes
-        c = np.random.choice(container.shape[0], 1, p=p/p.sum())[0]
-
-        # convert coordinate to cartesian 
-        x = r * np.cos(t)
-        y = r * np.sin(t)
-
-        # add to point lists
-        points_raw.append([x, y, z])
-        try:
-            colors_raw.append(list(LABEL_COLORS[c]))
-        except:
-            c = 0
-            colors_raw.append(list(LABEL_COLORS[c]))
+    # r x t x z x c
+    # c x r x t x z
+    start_time = time.time()
+    # Generate random cell indices num_samplesx3
+    cell = np.random.randint([0, 0, 0], high=container.shape[1:], size=(num_samples, 3))
     
-    points = np.array(points_raw)
-    colors = np.array(colors_raw)
+    # compute steps
+    steps = (max_dim - min_dim)/container.shape[1:] 
 
-    point_list.points = o3d.utility.Vector3dVector(points)
-    point_list.colors = o3d.utility.Vector3dVector(colors)
+    bound_low = min_dim + steps * cell
+    bound_high = min_dim + steps * (cell+1)
+
+    # sample a random cylindrical coordinate from the cell, num_samplex3
+    cyl_coords = np.random.uniform(bound_low, bound_high, (num_samples, 3))
+    
+    #  num_samples x C
+    p = container[:, cell[:, 0], cell[:, 1], cell[:, 2]].T
+
+    mask = (p[:, 0] != 1)
+    p = p[mask]
+    cyl_coords = cyl_coords[mask]
+    cell = cell[mask]
+    num_samples = len(p)
+
+    # choose a class based on class probabilities 
+    prob_sum        = np.cumsum(p, axis=1) # num_cyl_cells x classes 
+    rand_samples    = np.random.rand(num_samples, 1)
+    label          = (rand_samples < prob_sum).argmax(axis=1) # num_samples x 1
+
+    # convert coordinate to cartesian 
+    x = (cyl_coords[:, 0] * np.cos(cyl_coords[:, 1])).reshape(-1, 1)
+    y = (cyl_coords[:, 0] * np.sin(cyl_coords[:, 1])).reshape(-1, 1)
+    z = (cyl_coords[:, 2]).reshape(-1, 1)
+    #pdb.set_trace()
+    points_cart = np.hstack((x, y, z))
+    
+    # add to point lists
+    point_list = o3d.geometry.PointCloud()     
+    point_list.points = o3d.utility.Vector3dVector(points_cart)
+    point_list.colors = o3d.utility.Vector3dVector(LABEL_COLORS[label])
 
     # Add to visualizer
     vis.add_geometry(point_list)
 
-    # Graphics loop
-    while(True):
-        vis.poll_events()
-        vis.update_renderer()
-        time.sleep(0.005)
-
+    print("gen_points: Total runtime ", time.time()-start_time)
 
 # test code
 if __name__ == "__main__":
-    load_dir = "../Scenes/03/03_processed/evaluation/"
+    load_dir = "../03_processed/evaluation/"
     # Load params
     with open(load_dir + "params.json") as f:
         params = json.load(f)
@@ -111,11 +96,32 @@ if __name__ == "__main__":
         grid_shape = [int(i) for i in grid_shape]
         min_dim = params["min_bound"]
         max_dim = params["max_bound"]
+    
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(
+        window_name='Segmented Scene',
+        width=960,
+        height=540,
+        left=480,
+        top=270)
+    vis.get_render_option().background_color = [0.0, 0.0, 0.0]
+    vis.get_render_option().point_size = 3
+    vis.get_render_option().show_coordinate_frame = True
+
     # Load frames
+    i = 0
+    
     for frame in os.listdir(load_dir):
         if not frame.endswith("bin"):
             continue
         c = np.fromfile(load_dir + frame, dtype="float32").reshape(grid_shape)
         c[0, :, :, :] += 1e-6
         c = c / np.sum(c, axis=0)
-        vis_cyl(c, min_dim, max_dim, 1000000)
+        gen_points(c, np.array(min_dim), np.array(max_dim), 100000, vis)
+
+    
+    # Graphics loop
+    while(True):
+        vis.poll_events()
+        vis.update_renderer()
+        time.sleep(0.005)
