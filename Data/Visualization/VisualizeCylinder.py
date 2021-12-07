@@ -57,23 +57,29 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     
     #  num_samples x C
     p = container[:, cell[:, 0], cell[:, 1], cell[:, 2]].T
-
+    original_num_samples = num_samples
+    # Remove free points
     mask = (p[:, 0] != 1)
     p = p[mask]
     cyl_coords = cyl_coords[mask]
     cell = cell[mask]
     num_samples = len(p)
+    print("free sampled points:", (original_num_samples - num_samples) / original_num_samples)
 
     # choose a class based on class probabilities 
     prob_sum        = np.cumsum(p, axis=1) # num_cyl_cells x classes 
     rand_samples    = np.random.rand(num_samples, 1)
     label          = (rand_samples < prob_sum).argmax(axis=1) # num_samples x 1
-
+    
+    truelabel = (label[:] < 23)
+    label = label[truelabel]
+        
     # convert coordinate to cartesian 
     x = (cyl_coords[:, 0] * np.cos(cyl_coords[:, 1])).reshape(-1, 1)
     y = (cyl_coords[:, 0] * np.sin(cyl_coords[:, 1])).reshape(-1, 1)
     z = (cyl_coords[:, 2]).reshape(-1, 1)
     #pdb.set_trace()
+    y *= -1
     points_cart = np.hstack((x, y, z))
     
     # add to point lists
@@ -81,47 +87,64 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     point_list.points = o3d.utility.Vector3dVector(points_cart)
     point_list.colors = o3d.utility.Vector3dVector(LABEL_COLORS[label])
 
-    # Add to visualizer
-    vis.add_geometry(point_list)
-
     print("gen_points: Total runtime ", time.time()-start_time)
+    return point_list
 
 # test code
-if __name__ == "__main__":
-    load_dir = "../03_processed/evaluation/"
-    # Load params
-    with open(load_dir + "params.json") as f:
-        params = json.load(f)
-        grid_shape = [params["num_channels"]] + list(params["grid_size"])
-        grid_shape = [int(i) for i in grid_shape]
-        min_dim = params["min_bound"]
-        max_dim = params["max_bound"]
-    
+
+def main():
     vis = o3d.visualization.Visualizer()
-    vis.create_window(
-        window_name='Segmented Scene',
-        width=960,
-        height=540,
-        left=480,
-        top=270)
-    vis.get_render_option().background_color = [0.0, 0.0, 0.0]
-    vis.get_render_option().point_size = 3
-    vis.get_render_option().show_coordinate_frame = True
+    try: 
+        load_dir = "../Generation/Scenes/01/01_processed/evaluation/"      
+        # Load params
+        with open(load_dir + "params.json") as f:
+            params = json.load(f)
+            grid_shape = [params["num_channels"]] + list(params["grid_size"])
+            grid_shape = [int(i) for i in grid_shape]
+            min_dim = params["min_bound"]
+            max_dim = params["max_bound"]
+        
+        vis.create_window(
+            window_name='Segmented Scene',
+            width=960,
+            height=540,
+            left=480,
+            top=270)
+        vis.get_render_option().background_color = [0.0, 0.0, 0.0]
+        vis.get_render_option().point_size = 3
+        vis.get_render_option().show_coordinate_frame = True
 
-    # Load frames
-    i = 0
-    
-    for frame in os.listdir(load_dir):
-        if not frame.endswith("bin"):
-            continue
-        c = np.fromfile(load_dir + frame, dtype="float32").reshape(grid_shape)
-        c[0, :, :, :] += 1e-6
-        c = c / np.sum(c, axis=0)
-        gen_points(c, np.array(min_dim), np.array(max_dim), 100000, vis)
+        # Load frames
+        frame = 0
+        
+        while True:
+            print("frame:", frame)
 
+            c = np.fromfile(load_dir + str(frame).zfill(6) + ".bin", dtype="float32").reshape(grid_shape)
+            c[0, :, :, :] += 1e-6
+            c = c / np.sum(c, axis=0)
+            
+            point_list = gen_points(c, np.array(min_dim), np.array(max_dim), 10000000, vis)
+
+            vis.add_geometry(point_list)
+            if frame < 2:
+                for i in range(50):
+                    vis.poll_events()
+                    vis.update_renderer()
+                    time.sleep(0.005)
+            else:
+                vis.poll_events()
+                vis.update_renderer()
+            
+            vis.remove_geometry(point_list)
+
+            frame += 1
     
-    # Graphics loop
-    while(True):
-        vis.poll_events()
-        vis.update_renderer()
-        time.sleep(0.005)
+    finally:
+        vis.destroy_window()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(' - Exited by user.')
