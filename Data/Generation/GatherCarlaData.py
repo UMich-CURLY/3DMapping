@@ -34,7 +34,7 @@ import carla
 
 
 # Records velocities of non-ego vehicles, pose of lidar, lidar scan with semantic labels
-def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, view=0):
+def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, frame, view=0):
     """Prepares a point cloud with semantic segmentation
     colors ready to be consumed by Open3D"""
     data = np.frombuffer(point_cloud.raw_data, dtype=np.dtype([
@@ -72,7 +72,6 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
     location = np.array(lidar_loc.get_matrix())
 
     timestamp = world.get_snapshot().timestamp
-    frame = world.get_snapshot().frame
 
     # Record time, velocities, pose, points, labels, instances
     time_file = open(save_dir + '/times' + str(view) + '.txt', 'a')
@@ -86,8 +85,7 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
     np.save(save_dir + "/pose" + str(view) + "/" + str(frame), location)
 
 
-def bev_camera_callback(image, world, save_dir):
-    frame = world.get_snapshot().frame
+def bev_camera_callback(image, world, save_dir, frame):
     image.save_to_disk(save_dir + "/bev/" + str(frame) + ".jpg")
 
 
@@ -144,6 +142,7 @@ def main(arg):
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         vehicle.set_autopilot(True)
 
+        spectator = world.get_spectator()
         # To ensure synchrony
         lidar_queue = Queue()
         camera_queue = Queue()
@@ -173,8 +172,7 @@ def main(arg):
 
             lidar_bp = generate_lidar_bp(arg, world, blueprint_library, delta)
             # Location of lidar, fixed to vehicle
-            user_offset = vehicle_transform.location
-            lidar_transform = carla.Transform(carla.Location(x=offsets[0], y=offsets[1], z=offsets[2]) + user_offset)
+            lidar_transform = carla.Transform(carla.Location(x=offsets[0], y=offsets[1], z=offsets[2]))
             lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
             lidars.append(lidar)
             # Add callback
@@ -199,31 +197,27 @@ def main(arg):
         cameras.append(cam01)
 
         frame = 0
-        dt0 = datetime.now()
         while True:
             world.tick()
+            spectator.set_transform(vehicle.get_transform())
             time.sleep(0.005)
             # Store Data
             try:
                 for _ in range(len(lidars)):
                     data, view = lidar_queue.get()
                     print(frame, view)
-                    semantic_lidar_callback(data, world, lidars[view].id, vehicle.id, arg["storage_dir"], view=view)
+                    semantic_lidar_callback(data, world, lidars[view].id, vehicle.id, arg["storage_dir"], frame, view=view)
 
             except Empty:
                 print("    Dropped LIDAR data")
             try:
                 for _ in range(len(cameras)):
                     image = camera_queue.get()
-                    bev_camera_callback(image, world, arg["storage_dir"])
+                    bev_camera_callback(image, world, arg["storage_dir"], frame)
 
             except Empty:
                 print("    Dropped Camera data")
 
-            process_time = datetime.now() - dt0
-            # sys.stdout.write('\r' + 'FPS: ' + str(1.0 / process_time.total_seconds()) + "\n")
-            # sys.stdout.flush()
-            dt0 = datetime.now()
             frame += 1
 
     finally:
@@ -251,7 +245,7 @@ if __name__ == "__main__":
         "range": 50,
         "points_per_second": 50000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/new"
+        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/new2"
     }
 
     try:

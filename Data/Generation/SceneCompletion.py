@@ -6,7 +6,6 @@ from numpy.lib.function_base import trim_zeros
 import json
 
 from ShapeContainer import ShapeContainer
-from Utils import LABEL_COLORS
 
 # New
 def initialize_grid(grid_size=np.array([100., 100., 10.]),
@@ -183,17 +182,17 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 400
-    t_end = 500
+    t_start = 5
+    t_end = 195
     dt = 0.1
-    seq_dir = "Scenes/03/03/"
-    save_dir = "Scenes/03/03_processed/"
+    seq_dir = "../Scenes/02/raw/"
+    save_dir = "../Scenes/02/cylindrical/"
     free_res = 1.5
     
     # Parameters for container: cylindrical
     grid_size = np.array([100., 100., 10.])
-    min_bound = np.array([0, -1.0*np.pi, 0], dtype=np.float32)
-    max_bound = np.array([20, 1.0*np.pi, 10], dtype=np.float32)
+    min_bound = np.array([0, -1.0*np.pi, -3], dtype=np.float32)
+    max_bound = np.array([40, 1.0*np.pi, 2], dtype=np.float32)
     num_channels = 25
     coordinates = "cylindrical"
     
@@ -218,8 +217,6 @@ def main():
                 "num_channels": num_channels,
                 "coordinates": coordinates
     }
-    with open(save_dir + "/evaluation/params.json", "w") as f:
-        json.dump(params, f)
 
     # Load sensors data
     if not os.path.exists(save_dir):
@@ -244,8 +241,11 @@ def main():
     inv_transforms = get_inv_transforms(sensors, seq_dir, t_start, t_end)
 
     # Whether any measurements were found
-    if not os.path.exists(save_dir + "evaluation"):
-        os.mkdir(save_dir + "evaluation")
+    if not os.path.exists(os.path.join(save_dir, "evaluation")):
+        os.mkdir(os.path.join(save_dir, "evaluation"))
+    
+    with open(os.path.join(save_dir, "evaluation/params.json"), "w") as f:
+        json.dump(params, f)
 
     # Loop over frames
     for i in range(t_start, t_end):
@@ -266,7 +266,7 @@ def main():
             voxels = voxel_grid.get_voxels()
             voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
             print(voxels.shape)
-            voxels.astype('float32').tofile(save_dir + "/evaluation/" + frame_str + ".bin")
+            voxels.astype('float32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".bin"))
 
 
 if __name__ == '__main__':
