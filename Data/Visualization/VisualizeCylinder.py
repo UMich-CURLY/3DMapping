@@ -13,9 +13,9 @@ LABEL_COLORS = np.array([
     (255, 255, 0),   # Pedestrian
     (153, 153, 153), # Pole
     (157, 234, 50),  # RoadLines
-    (0, 0, 50),  # Road
-    (0, 0, 50),  # Sidewalk
-    (107, 142, 35),  # Vegetation
+    (0, 0, 255),  # Road
+    (255, 255, 255),  # Sidewalk
+    (0, 155, 0),  # Vegetation
     (255, 0, 0),     # Vehicle
     (102, 102, 156), # Wall
     (220, 220, 0),   # TrafficSign
@@ -94,7 +94,7 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Generation/Scenes/Scene1/01_processed/evaluation/"      
+        load_dir = "../Scenes/01/cylindrical/evaluation/"
         # Load params
         with open(load_dir + "params.json") as f:
             params = json.load(f)
@@ -123,7 +123,7 @@ def main():
             c[0, :, :, :] += 1e-6
             c = c / np.sum(c, axis=0)
 
-            point_list = gen_points(c, np.array(min_dim), np.array(max_dim), 1000000, vis)
+            point_list = gen_points(c, np.array(min_dim), np.array(max_dim), 10000000, vis)
             
             if frame ==0:
                 geometry = o3d.geometry.PointCloud(point_list)
@@ -133,8 +133,11 @@ def main():
                 geometry.colors = point_list.colors
 
             vis.update_geometry( geometry)
-            vis.poll_events()
-            vis.update_renderer()
+            
+            for i in range(100):
+                vis.poll_events()
+                vis.update_renderer()
+                time.sleep(0.005)
 
             frame += 1
     
