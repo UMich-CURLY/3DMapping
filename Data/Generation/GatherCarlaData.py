@@ -143,7 +143,6 @@ def main(arg):
         vehicle.set_autopilot(True)
 
         spectator = world.get_spectator()
-
         # To ensure synchrony
         lidar_queue = Queue()
         camera_queue = Queue()
@@ -244,7 +243,7 @@ if __name__ == "__main__":
         "lower_fov": -25,
         "channels": 64.0,
         "range": 50,
-        "points_per_second": 500000,
+        "points_per_second": 50000,
         "show_axis": True,
         "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/new2"
     }

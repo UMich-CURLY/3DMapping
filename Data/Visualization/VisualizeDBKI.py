@@ -77,7 +77,7 @@ def main(args):
         frame = 0
         while True:
             # Load points
-            frame_str = load_dir + "/evaluation/" + str(frame).zfill(6)
+            frame_str = load_dir + str(frame).zfill(6)
             labels = np.fromfile(frame_str + ".label", dtype=np.uint32)
             points = np.fromfile(frame_str + ".bin", dtype=np.float32).reshape(-1, 3)
             non_free = labels != 0
@@ -109,7 +109,7 @@ def main(args):
             vis.update_geometry(point_list)
 
             # Sleep in a loop
-            for i in range(10):
+            for i in range(50):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)
@@ -122,7 +122,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = {
-        "load_dir": "/home/tigeriv/Data/Carla/02_processed"
+        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/01_cartesian/evaluation/completion/"
     }
 
     try:
