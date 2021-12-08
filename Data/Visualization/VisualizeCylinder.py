@@ -46,6 +46,16 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     # Generate random cell indices num_samplesx3
     cell = np.random.randint([0, 0, 0], high=container.shape[1:], size=(num_samples, 3))
     
+    #  num_samples x C
+    p = container[:, cell[:, 0], cell[:, 1], cell[:, 2]].T
+    original_num_samples = num_samples
+    # Remove free points
+    mask = (p[:, 0] != 1)
+    p = p[mask]
+    cell = cell[mask]
+    num_samples = len(p)
+    print("free sampled points:", (original_num_samples - num_samples) / original_num_samples)
+    
     # compute steps
     steps = (max_dim - min_dim)/container.shape[1:] 
 
@@ -55,23 +65,12 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     # sample a random cylindrical coordinate from the cell, num_samplex3
     cyl_coords = np.random.uniform(bound_low, bound_high, (num_samples, 3))
     
-    #  num_samples x C
-    p = container[:, cell[:, 0], cell[:, 1], cell[:, 2]].T
-    original_num_samples = num_samples
-    # Remove free points
-    mask = (p[:, 0] != 1)
-    p = p[mask]
-    cyl_coords = cyl_coords[mask]
-    cell = cell[mask]
-    num_samples = len(p)
-    print("free sampled points:", (original_num_samples - num_samples) / original_num_samples)
-
     # choose a class based on class probabilities 
     prob_sum        = np.cumsum(p, axis=1) # num_cyl_cells x classes 
     rand_samples    = np.random.rand(num_samples, 1)
     label          = (rand_samples < prob_sum).argmax(axis=1) # num_samples x 1
     
-    truelabel = (label[:] < 23)
+    truelabel = (label[:] <= 23)
     label = label[truelabel]
         
     # convert coordinate to cartesian 
@@ -95,7 +94,7 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Generation/Scenes/01/01_processed/evaluation/"      
+        load_dir = "../Generation/Scenes/Scene1/01_processed/evaluation/"      
         # Load params
         with open(load_dir + "params.json") as f:
             params = json.load(f)
@@ -116,27 +115,26 @@ def main():
 
         # Load frames
         frame = 0
-        
+        geometry = None
         while True:
             print("frame:", frame)
 
             c = np.fromfile(load_dir + str(frame).zfill(6) + ".bin", dtype="float32").reshape(grid_shape)
             c[0, :, :, :] += 1e-6
             c = c / np.sum(c, axis=0)
-            
-            point_list = gen_points(c, np.array(min_dim), np.array(max_dim), 10000000, vis)
 
-            vis.add_geometry(point_list)
-            if frame < 2:
-                for i in range(50):
-                    vis.poll_events()
-                    vis.update_renderer()
-                    time.sleep(0.005)
-            else:
-                vis.poll_events()
-                vis.update_renderer()
+            point_list = gen_points(c, np.array(min_dim), np.array(max_dim), 1000000, vis)
             
-            vis.remove_geometry(point_list)
+            if frame ==0:
+                geometry = o3d.geometry.PointCloud(point_list)
+                vis.add_geometry(geometry)
+            else:
+                geometry.points = point_list.points
+                geometry.colors = point_list.colors
+
+            vis.update_geometry( geometry)
+            vis.poll_events()
+            vis.update_renderer()
 
             frame += 1
     
