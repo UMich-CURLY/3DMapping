@@ -94,7 +94,7 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Scenes/01/cylindrical/evaluation/"
+        load_dir = "../Scenes/02/cylindrical/evaluation/"
         # Load params
         with open(load_dir + "params.json") as f:
             params = json.load(f)
@@ -134,7 +134,7 @@ def main():
 
             vis.update_geometry( geometry)
             
-            for i in range(100):
+            for i in range(1000):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)

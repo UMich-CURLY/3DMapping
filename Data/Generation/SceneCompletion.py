@@ -183,10 +183,10 @@ def main():
     Initialize settings and data structures
     """
     t_start = 5
-    t_end = 605
+    t_end = 195
     dt = 0.1
-    seq_dir = "../Scenes/01/raw/"
-    save_dir = "../Scenes/01/cylindrical/"
+    seq_dir = "../Scenes/02/raw/"
+    save_dir = "../Scenes/02/cylindrical/"
     free_res = 1.5
     
     # Parameters for container: cylindrical

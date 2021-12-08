@@ -19,6 +19,8 @@ import numpy as np
 import copy
 from matplotlib import cm
 import open3d as o3d
+from queue import Queue
+from queue import Empty
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -32,13 +34,12 @@ import carla
 
 
 # Records velocities of non-ego vehicles, pose of lidar, lidar scan with semantic labels
-def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, view=0):
+def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, frame, view=0):
     """Prepares a point cloud with semantic segmentation
     colors ready to be consumed by Open3D"""
     data = np.frombuffer(point_cloud.raw_data, dtype=np.dtype([
         ('x', np.float32), ('y', np.float32), ('z', np.float32),
         ('CosAngle', np.float32), ('ObjIdx', np.uint32), ('ObjTag', np.uint32)]))
-    print(lidar_id, view)
 
     non_ego = np.array(data['ObjIdx']) != vehicle_id
 
@@ -65,15 +66,12 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
 
     # Record time, velocities, position
     labels = np.array(data['ObjTag'])[non_ego]
-    if view == 0:
-        print(np.unique(labels, return_counts=True))
     instances = np.array(data['ObjIdx'])[non_ego]
     actor_velocities = np.array(actor_velocities)
 
     location = np.array(lidar_loc.get_matrix())
 
     timestamp = world.get_snapshot().timestamp
-    frame = world.get_snapshot().frame
 
     # Record time, velocities, pose, points, labels, instances
     time_file = open(save_dir + '/times' + str(view) + '.txt', 'a')
@@ -85,6 +83,10 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
     np.save(save_dir + "/labels" + str(view) + "/" + str(frame), labels)
     np.save(save_dir + "/velodyne" + str(view) + "/" + str(frame), points)
     np.save(save_dir + "/pose" + str(view) + "/" + str(frame), location)
+
+
+def bev_camera_callback(image, world, save_dir, frame):
+    image.save_to_disk(save_dir + "/bev/" + str(frame) + ".jpg")
 
 
 def generate_lidar_bp(arg, world, blueprint_library, delta):
@@ -140,16 +142,29 @@ def main(arg):
         vehicle = world.spawn_actor(vehicle_bp, vehicle_transform)
         vehicle.set_autopilot(True)
 
+        spectator = world.get_spectator()
+
+        # To ensure synchrony
+        lidar_queue = Queue()
+        camera_queue = Queue()
+        if not os.path.exists(arg["storage_dir"]):
+            os.mkdir(arg["storage_dir"])
+
         # Create semantic lidar
         NUM_SENSORS = 5
         views = np.arange(NUM_SENSORS)
         lidars = []
         for i in range(NUM_SENSORS):
-            os.mkdir(arg["storage_dir"] + "/velocities" + str(i))
-            os.mkdir(arg["storage_dir"] + "/instances" + str(i))
-            os.mkdir(arg["storage_dir"] + "/labels" + str(i))
-            os.mkdir(arg["storage_dir"] + "/velodyne" + str(i))
-            os.mkdir(arg["storage_dir"] + "/pose" + str(i))
+            if not os.path.exists(arg["storage_dir"] + "/velocities" + str(i)):
+                os.mkdir(arg["storage_dir"] + "/velocities" + str(i))
+            if not os.path.exists(arg["storage_dir"] + "/instances" + str(i)):
+                os.mkdir(arg["storage_dir"] + "/instances" + str(i))
+            if not os.path.exists(arg["storage_dir"] + "/labels" + str(i)):
+                os.mkdir(arg["storage_dir"] + "/labels" + str(i))
+            if not os.path.exists(arg["storage_dir"] + "/velodyne" + str(i)):
+                os.mkdir(arg["storage_dir"] + "/velodyne" + str(i))
+            if not os.path.exists(arg["storage_dir"] + "/pose" + str(i)):
+                os.mkdir(arg["storage_dir"] + "/pose" + str(i))
 
             if i == 0: # Onboard sensor
                 offsets = [-0.5, 0.0, 1.8]
@@ -158,44 +173,52 @@ def main(arg):
 
             lidar_bp = generate_lidar_bp(arg, world, blueprint_library, delta)
             # Location of lidar, fixed to vehicle
-            user_offset = vehicle_transform.location
-            lidar_transform = carla.Transform(carla.Location(x=offsets[0], y=offsets[1], z=offsets[2]) + user_offset)
+            lidar_transform = carla.Transform(carla.Location(x=offsets[0], y=offsets[1], z=offsets[2]))
             lidar = world.spawn_actor(lidar_bp, lidar_transform, attach_to=vehicle)
             lidars.append(lidar)
             # Add callback
 
-        # FOR LOOP Breaks
-        lidars[0].listen(lambda data, view=views[0]:
-                semantic_lidar_callback(data, world, lidars[0].id, vehicle.id, arg["storage_dir"], view=view))
-        lidars[1].listen(lambda data, view=views[1]:
-                semantic_lidar_callback(data, world, lidars[1].id, vehicle.id, arg["storage_dir"], view=view))
-        lidars[2].listen(lambda data, view=views[2]:
-                semantic_lidar_callback(data, world, lidars[2].id, vehicle.id, arg["storage_dir"], view=view))
-        lidars[3].listen(lambda data, view=views[3]:
-                semantic_lidar_callback(data, world, lidars[3].id, vehicle.id, arg["storage_dir"], view=view))
-        lidars[4].listen(lambda data, view=views[4]:
-                semantic_lidar_callback(data, world, lidars[4].id, vehicle.id, arg["storage_dir"], view=view))
+            # FOR LOOP Breaks
+            lidars[i].listen(lambda data, view=views[i]: lidar_queue.put([data, view]))
 
-        # # Create semantic lidar number two (different view)
-        # lidar_bp2 = generate_lidar_bp(arg, world, blueprint_library, delta)
-        # # Location of lidar, fixed to vehicle
-        # user_offset2 = carla.Location(0.0, 0.0, 0.0)
-        # lidar_transform2 = carla.Transform(carla.Location(x=1.5, y=5.0, z=3.8) + user_offset2)
-        # lidar2 = world.spawn_actor(lidar_bp2, lidar_transform2, attach_to=vehicle)
-        # # Add callback
-        # lidar2.listen(lambda data: semantic_lidar_callback(data, world, lidar2.id, vehicle.id, arg["storage_dir"],
-        #                                                    view=1))
+        # Camera
+        if not os.path.exists(arg["storage_dir"] + "/bev"):
+            os.mkdir(arg["storage_dir"] + "/bev")
+
+        cameras = []
+        cam_bp = blueprint_library.find('sensor.camera.rgb')
+        cam_bp.set_attribute("image_size_x", str(1920))
+        cam_bp.set_attribute("image_size_y", str(1080))
+        cam_bp.set_attribute("fov", str(105))
+        cam_location = carla.Location(0, 0, 50)
+        cam_rotation = carla.Rotation(270, 0, 0)
+        cam_transform = carla.Transform(cam_location, cam_rotation)
+        cam01 = world.spawn_actor(cam_bp, cam_transform, attach_to=vehicle)
+        cam01.listen(camera_queue.put)
+        cameras.append(cam01)
 
         frame = 0
-        dt0 = datetime.now()
         while True:
-            time.sleep(0.005)
             world.tick()
+            spectator.set_transform(vehicle.get_transform())
+            time.sleep(0.005)
+            # Store Data
+            try:
+                for _ in range(len(lidars)):
+                    data, view = lidar_queue.get()
+                    print(frame, view)
+                    semantic_lidar_callback(data, world, lidars[view].id, vehicle.id, arg["storage_dir"], frame, view=view)
 
-            process_time = datetime.now() - dt0
-            # sys.stdout.write('\r' + 'FPS: ' + str(1.0 / process_time.total_seconds()) + "\n")
-            # sys.stdout.flush()
-            dt0 = datetime.now()
+            except Empty:
+                print("    Dropped LIDAR data")
+            try:
+                for _ in range(len(cameras)):
+                    image = camera_queue.get()
+                    bev_camera_callback(image, world, arg["storage_dir"], frame)
+
+            except Empty:
+                print("    Dropped Camera data")
+
             frame += 1
 
     finally:
@@ -223,7 +246,7 @@ if __name__ == "__main__":
         "range": 50,
         "points_per_second": 500000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/03"
+        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/new2"
     }
 
     try:

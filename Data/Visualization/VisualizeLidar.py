@@ -55,7 +55,7 @@ def gen_points(load_dir, sensor, frame, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Scenes/01/raw/"
+        load_dir = "../Scenes/02/raw/"
         sensor = 0
         vis.create_window(
             window_name='Segmented Scene',
@@ -67,7 +67,7 @@ def main():
         vis.get_render_option().point_size = 3
 
         # Load frames
-        frame = 150
+        frame = 0
         point_list = gen_points(load_dir, sensor, frame, vis)
         geometry = o3d.geometry.PointCloud(point_list)
         vis.add_geometry(geometry)
