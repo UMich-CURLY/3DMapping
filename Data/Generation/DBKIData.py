@@ -4,6 +4,8 @@ import glob
 import numpy as np
 from numpy.lib.function_base import trim_zeros
 import json
+import copy
+from shutil import copyfile
 
 from ShapeContainer import ShapeContainer
 
@@ -215,16 +217,26 @@ def data_from_grid(voxel_grid):
     return valid_points, valid_labels
 
 
+def copy_bev(t_start, t_end, seq_dir, save_dir):
+    if not os.path.exists(os.path.join(save_dir, "bev")):
+        os.mkdir(os.path.join(save_dir, "bev"))
+    for i in range(t_start, t_end):
+        t_frame = str(i)
+        frame_str = get_frame_str(t_frame, t_start, t_end)
+        if frame_str:
+            copyfile(os.path.join(seq_dir, "bev", t_frame + ".jpg"), os.path.join(save_dir, "bev", frame_str + ".jpg"))
+
+
 def main():
     """
     Initialize settings and data structures
     """
-    t_start = 2600
-    t_end = 3200
+    t_start = 15
+    t_end = 615
     dt = 0.1
-    seq_dir = "../Scenes/01/"
-    save_dir = "../Scenes/01_cartesian/"
-    free_res = 1.5
+    seq_dir = "../Scenes/02/raw/"
+    save_dir = "../Scenes/02/cartesian/"
+    free_res = 100
     
     # Parameters for container: cylindrical
 #     grid_size = np.array([100., 100., 10.])
@@ -282,8 +294,12 @@ def main():
         os.mkdir(os.path.join(save_dir, "evaluation"))
     if not os.path.exists(os.path.join(save_dir, "evaluation", "completion")):
         os.mkdir(os.path.join(save_dir, "evaluation", "completion"))
+        os.mkdir(os.path.join(save_dir, "evaluation", "completion", "occluded"))
+        os.mkdir(os.path.join(save_dir, "evaluation", "completion", "visible"))
     if not os.path.exists(os.path.join(save_dir, "evaluation", "accuracy")):
         os.mkdir(os.path.join(save_dir, "evaluation", "accuracy"))
+
+    copy_bev(t_start, t_end, seq_dir, save_dir)
         
     with open(save_dir + "/evaluation/params.json", "w") as f:
         json.dump(params, f)
@@ -298,12 +314,24 @@ def main():
             all_points, all_labels = data_from_grid(all_grid)
 
             ego_grid = make_grid(voxel_grid, t_frame, [sensors[0]], inv_transforms, free_res, seq_dir)
-            ego_mask = np.sum(voxel_grid.get_voxels(), axis=3) > 0
-            ego_grid.voxels[ego_mask] = all_grid.voxels[ego_mask]
             ego_points, ego_labels = data_from_grid(ego_grid)
 
-            all_points.astype('float32').tofile(save_dir + "/evaluation/completion/" + frame_str + ".bin")
-            all_labels.astype('uint32').tofile(save_dir + "/evaluation/completion/" + frame_str + ".label")
+            occ_points = []
+            occ_labels = []
+            ego_point_set = set(tuple(ego_points[j, :]) for j in range(ego_labels.shape[0]))
+            for j in range(all_labels.shape[0]):
+                if tuple(all_points[j, :]) not in ego_point_set:
+                    occ_points.append(all_points[j, :])
+                    occ_labels.append(all_labels[j])
+
+            occ_points = np.array(occ_points)
+            occ_labels = np.array(occ_labels)
+            print(ego_labels.shape, all_labels.shape, occ_labels.shape)
+
+            occ_points.astype('float32').tofile(save_dir + "/evaluation/completion/occluded/" + frame_str + ".bin")
+            occ_labels.astype('uint32').tofile(save_dir + "/evaluation/completion/occluded/" + frame_str + ".label")
+            ego_points.astype('float32').tofile(save_dir + "/evaluation/completion/visible/" + frame_str + ".bin")
+            ego_labels.astype('uint32').tofile(save_dir + "/evaluation/completion/visible/" + frame_str + ".label")
             ego_points.astype('float32').tofile(save_dir + "/evaluation/accuracy/" + frame_str + ".bin")
             ego_labels.astype('uint32').tofile(save_dir + "/evaluation/accuracy/" + frame_str + ".label")
 

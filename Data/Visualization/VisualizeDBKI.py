@@ -98,6 +98,8 @@ def main(args):
             points = np.transpose(new_points, axes=(0, 2, 1)).reshape(-1, 3)
             labels = new_labels.reshape(-1)
 
+            print(points.shape, labels.shape)
+
             int_color = LABEL_COLORS[labels]
             point_list.points = o3d.utility.Vector3dVector(points)
             point_list.colors = o3d.utility.Vector3dVector(int_color)
@@ -109,7 +111,7 @@ def main(args):
             vis.update_geometry(point_list)
 
             # Sleep in a loop
-            for i in range(50):
+            for i in range(5000):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)
@@ -122,7 +124,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = {
-        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/01_cartesian/evaluation/completion/"
+        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/02/cartesian/evaluation/completion/visible/"
     }
 
     try:
