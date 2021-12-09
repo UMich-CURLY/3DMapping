@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 import pdb
+from PIL import Image
+import psutil
 
 LABEL_COLORS = np.array([
     (0, 0, 0), # None
@@ -78,12 +80,17 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     y = (cyl_coords[:, 0] * np.sin(cyl_coords[:, 1])).reshape(-1, 1)
     z = (cyl_coords[:, 2]).reshape(-1, 1)
     #pdb.set_trace()
-    y *= -1
     points_cart = np.hstack((x, y, z))
+
+    # Rotate
+    new_points = np.zeros(points_cart.shape)
+    new_points[:, 0] = points_cart[:, 1]
+    new_points[:, 1] = points_cart[:, 0]
+    new_points[:, 2] = points_cart[:, 2]
     
     # add to point lists
     point_list = o3d.geometry.PointCloud()     
-    point_list.points = o3d.utility.Vector3dVector(points_cart)
+    point_list.points = o3d.utility.Vector3dVector(new_points)
     point_list.colors = o3d.utility.Vector3dVector(LABEL_COLORS[label])
 
     print("gen_points: Total runtime ", time.time()-start_time)
@@ -116,6 +123,7 @@ def main():
         # Load frames
         frame = 0
         geometry = None
+        im = None
         while True:
             print("frame:", frame)
 
@@ -132,9 +140,23 @@ def main():
                 geometry.points = point_list.points
                 geometry.colors = point_list.colors
 
+            # Display Scene
             vis.update_geometry( geometry)
-            
-            for i in range(1000):
+
+            # Close BEV
+            if im:
+                im.close()
+                for proc in psutil.process_iter():
+                    # check whether the process name matches
+                    if proc.name() == "eog":
+                        proc.kill()
+            # Show next BEV
+            im = Image.open(load_dir + "../bev/" + str(frame).zfill(6) + ".jpg")
+            w, h = im.size
+            im = im.resize((int(w * 0.25), int(h * 0.25)))
+            im.show()
+
+            for i in range(5):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)

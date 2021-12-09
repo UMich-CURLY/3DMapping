@@ -4,6 +4,7 @@ import glob
 import numpy as np
 from numpy.lib.function_base import trim_zeros
 import json
+from shutil import copyfile
 
 from ShapeContainer import ShapeContainer
 
@@ -166,6 +167,7 @@ def add_points(points, labels, grid):
     grid[pointlabels] = grid[pointlabels] + 1
     return grid
 
+
 # Add points along ray to grid
 def ray_trace(point, label, sample_spacing):
     vec_norm = np.linalg.norm(point)
@@ -178,12 +180,23 @@ def ray_trace(point, label, sample_spacing):
     labels[0] = label
     return new_points, np.asarray(labels).reshape(-1, 1)
 
+
+def copy_bev(t_start, t_end, seq_dir, save_dir):
+    if not os.path.exists(os.path.join(save_dir, "bev")):
+        os.mkdir(os.path.join(save_dir, "bev"))
+    for i in range(t_start, t_end):
+        t_frame = str(i)
+        frame_str = get_frame_str(t_frame, t_start, t_end)
+        if frame_str:
+            copyfile(os.path.join(seq_dir, "bev", t_frame + ".jpg"), os.path.join(save_dir, "bev", frame_str + ".jpg"))
+
+
 def main():
     """
     Initialize settings and data structures
     """
-    t_start = 5
-    t_end = 195
+    t_start = 15
+    t_end = 615
     dt = 0.1
     seq_dir = "../Scenes/02/raw/"
     save_dir = "../Scenes/02/cylindrical/"
@@ -191,8 +204,8 @@ def main():
     
     # Parameters for container: cylindrical
     grid_size = np.array([100., 100., 10.])
-    min_bound = np.array([0, -1.0*np.pi, -3], dtype=np.float32)
-    max_bound = np.array([40, 1.0*np.pi, 2], dtype=np.float32)
+    min_bound = np.array([0, -1.0*np.pi, -2.5], dtype=np.float32)
+    max_bound = np.array([40, 1.0*np.pi, 2.5], dtype=np.float32)
     num_channels = 25
     coordinates = "cylindrical"
     
@@ -246,6 +259,8 @@ def main():
     
     with open(os.path.join(save_dir, "evaluation/params.json"), "w") as f:
         json.dump(params, f)
+
+    copy_bev(t_start, t_end, seq_dir, save_dir)
 
     # Loop over frames
     for i in range(t_start, t_end):

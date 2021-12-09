@@ -150,7 +150,7 @@ def main(arg):
             os.mkdir(arg["storage_dir"])
 
         # Create semantic lidar
-        NUM_SENSORS = 5
+        NUM_SENSORS = 20
         views = np.arange(NUM_SENSORS)
         lidars = []
         for i in range(NUM_SENSORS):
@@ -243,9 +243,9 @@ if __name__ == "__main__":
         "lower_fov": -25,
         "channels": 64.0,
         "range": 50,
-        "points_per_second": 50000,
+        "points_per_second": 500000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/new2"
+        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/02/raw"
     }
 
     try:
