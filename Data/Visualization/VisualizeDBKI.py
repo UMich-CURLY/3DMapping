@@ -71,7 +71,7 @@ def main(args):
             left=480,
             top=270)
         vis.get_render_option().background_color = [0.05, 0.05, 0.05]
-        vis.get_render_option().point_size = 1
+        vis.get_render_option().point_size = 3
         vis.get_render_option().show_coordinate_frame = True
 
         frame = 0
@@ -82,9 +82,12 @@ def main(args):
             points = np.fromfile(frame_str + ".bin", dtype=np.float32).reshape(-1, 3)
             non_free = labels != 0
             points = points[non_free, :]
+            new_points = np.zeros(points.shape)
+            new_points[:, 0] = points[:, 1]
+            new_points[:, 1] = points[:, 0]
+            new_points[:, 2] = points[:, 2]
+            points = new_points
             labels = labels[non_free]
-
-            points[:, 1] *= -1
 
             # Fill in voxels
             voxel_resolution = 0.4
@@ -124,7 +127,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = {
-        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/02/cartesian/evaluation/completion/visible/"
+        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/04/cartesian_v2/evaluation/all/"
     }
 
     try:

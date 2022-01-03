@@ -21,6 +21,8 @@ from matplotlib import cm
 import open3d as o3d
 from queue import Queue
 from queue import Empty
+from carla import VehicleLightState as vls
+import logging
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -31,6 +33,31 @@ except IndexError:
     pass
 
 import carla
+
+
+def get_actor_blueprints(world, filter, generation):
+    bps = world.get_blueprint_library().filter(filter)
+
+    if generation.lower() == "all":
+        return bps
+
+    # If the filter returns only one bp, we assume that this one needed
+    # and therefore, we ignore the generation
+    if len(bps) == 1:
+        return bps
+
+    try:
+        int_generation = int(generation)
+        # Check if generation is in available generations
+        if int_generation in [1, 2]:
+            bps = [x for x in bps if int(x.get_attribute('generation')) == int_generation]
+            return bps
+        else:
+            print("   Warning! Actor Generation is not valid. No actor will be spawned.")
+            return []
+    except:
+        print("   Warning! Actor Generation is not valid. No actor will be spawned.")
+        return []
 
 
 # Records velocities of non-ego vehicles, pose of lidar, lidar scan with semantic labels
@@ -112,11 +139,70 @@ def generate_lidar_bp(arg, world, blueprint_library, delta):
     return lidar_bp
 
 
+def create_traffic(world, client, num_vehicle, traffic_manager):
+    # Create actors
+    blueprints = get_actor_blueprints(world, "vehicle.*", "All")
+    blueprintsWalkers = get_actor_blueprints(world, "walker.pedestrian.*", '2')
+    # Make sure safe
+    blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
+    blueprints = [x for x in blueprints if not x.id.endswith('microlino')]
+    blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
+    blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
+    blueprints = [x for x in blueprints if not x.id.endswith('t2')]
+    blueprints = [x for x in blueprints if not x.id.endswith('sprinter')]
+    blueprints = [x for x in blueprints if not x.id.endswith('firetruck')]
+    blueprints = [x for x in blueprints if not x.id.endswith('ambulance')]
+    blueprints = sorted(blueprints, key=lambda bp: bp.id)
+    # Spawn
+    batch = []
+    vehicles_list = []
+    spawn_points = world.get_map().get_spawn_points()
+    random.shuffle(spawn_points)
+    # Imports
+    SpawnActor = carla.command.SpawnActor
+    SetAutopilot = carla.command.SetAutopilot
+    SetVehicleLightState = carla.command.SetVehicleLightState
+    FutureActor = carla.command.FutureActor
+    # Create vehicles
+    for n, transform in enumerate(spawn_points):
+        if n >= num_vehicle:  # Number vehicles
+            break
+        blueprint = random.choice(blueprints)
+        if blueprint.has_attribute('color'):
+            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            blueprint.set_attribute('color', color)
+        if blueprint.has_attribute('driver_id'):
+            driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+            blueprint.set_attribute('driver_id', driver_id)
+        blueprint.set_attribute('role_name', 'autopilot')
+
+        # prepare the light state of the cars to spawn
+        light_state = vls.NONE
+        if True:
+            light_state = vls.Position | vls.LowBeam | vls.LowBeam
+
+        # spawn the cars and set their autopilot and light state all together
+        batch.append(SpawnActor(blueprint, transform)
+                     .then(SetAutopilot(FutureActor, True, traffic_manager.get_port()))
+                     .then(SetVehicleLightState(FutureActor, light_state)))
+
+    for response in client.apply_batch_sync(batch, True):  # not 100% sure
+        if response.error:
+            logging.error(response.error)
+        else:
+            vehicles_list.append(response.actor_id)
+
+    return vehicles_list
+
+
 def main(arg):
     """Main function of the script"""
     client = carla.Client(arg["host"], arg["port"])
     client.set_timeout(2.0)
     world = client.get_world()
+
+    if not os.path.exists(arg["storage_dir"]):
+        os.mkdir(arg["storage_dir"])
 
     # Record
     client.start_recorder(arg["storage_dir"] + "/recording01.log")
@@ -146,8 +232,8 @@ def main(arg):
         # To ensure synchrony
         lidar_queue = Queue()
         camera_queue = Queue()
-        if not os.path.exists(arg["storage_dir"]):
-            os.mkdir(arg["storage_dir"])
+
+        vehicles_list = create_traffic(world, client, arg["num_vehicles"], traffic_manager)
 
         # Create semantic lidar
         NUM_SENSORS = 20
@@ -168,7 +254,8 @@ def main(arg):
             if i == 0: # Onboard sensor
                 offsets = [-0.5, 0.0, 1.8]
             else:
-                offsets = np.random.uniform([-20, -20, 1], [20, 20, 10], [3,])
+                offsets = np.random.uniform([-10, -10, 1], [10, 10, 5], [3,])
+                print(offsets)
 
             lidar_bp = generate_lidar_bp(arg, world, blueprint_library, delta)
             # Location of lidar, fixed to vehicle
@@ -245,7 +332,8 @@ if __name__ == "__main__":
         "range": 50,
         "points_per_second": 500000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/02/raw"
+        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/04/raw",
+        "num_vehicles": 50
     }
 
     try:

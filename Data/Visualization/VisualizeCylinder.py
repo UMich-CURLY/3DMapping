@@ -46,6 +46,7 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     # c x r x t x z
     start_time = time.time()
     # Generate random cell indices num_samplesx3
+    print(container.shape)
     cell = np.random.randint([0, 0, 0], high=container.shape[1:], size=(num_samples, 3))
     
     #  num_samples x C
@@ -59,7 +60,7 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     print("free sampled points:", (original_num_samples - num_samples) / original_num_samples)
     
     # compute steps
-    steps = (max_dim - min_dim)/container.shape[1:] 
+    steps = (max_dim - min_dim)/container.shape[1:]
 
     bound_low = min_dim + steps * cell
     bound_high = min_dim + steps * (cell+1)
@@ -75,7 +76,9 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
     truelabel = (label[:] <= 23)
     label = label[truelabel]
         
-    # convert coordinate to cartesian 
+    # convert coordinate to cartesian
+    # x = cyl_coords[:, 0].reshape(-1, 1)
+    # y = cyl_coords[:, 1].reshape(-1, 1)
     x = (cyl_coords[:, 0] * np.cos(cyl_coords[:, 1])).reshape(-1, 1)
     y = (cyl_coords[:, 0] * np.sin(cyl_coords[:, 1])).reshape(-1, 1)
     z = (cyl_coords[:, 2]).reshape(-1, 1)
@@ -101,7 +104,8 @@ def gen_points(container, min_dim, max_dim,  num_samples, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Scenes/02/cylindrical/evaluation/"
+        load_dir = "../Scenes/04/cylindrical/evaluation/"
+        num_samples = 5e7
         # Load params
         with open(load_dir + "params.json") as f:
             params = json.load(f)
@@ -156,7 +160,7 @@ def main():
             im = im.resize((int(w * 0.25), int(h * 0.25)))
             im.show()
 
-            for i in range(5):
+            for i in range(5000):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)

@@ -51,6 +51,7 @@ def get_frame_str(t_frame, t_start, t_end):
     t_frame = int(t_frame) - t_start
     return str(t_frame).zfill(6)
 
+
 def load_poses(sensors, save_dir, seq_dir, t_start, t_end):
     """
     Loads poses from sensors, sorts poses, and computes transformation matrix from 
@@ -86,6 +87,7 @@ def load_poses(sensors, save_dir, seq_dir, t_start, t_end):
 
     return poses, sorted_poses_all, inv_first
 
+
 # Labels for ego sensor
 def save_labels(view_num, query, save_dir, seq_dir, t_start, t_end):
     to_folder = save_dir + "labels"
@@ -102,6 +104,7 @@ def save_labels(view_num, query, save_dir, seq_dir, t_start, t_end):
         if frame_str:
             label = np.load(seq_dir + "labels" + str(view_num) + "/" + label_file)
             label.astype('uint32').tofile(to_folder + frame_str + ".label")
+
 
 # Labels
 def save_points(view_num, query, save_dir, seq_dir, t_start, t_end):
@@ -135,6 +138,7 @@ def save_points(view_num, query, save_dir, seq_dir, t_start, t_end):
             points.astype('float32').tofile(to_folder_points + frame_str + ".bin")
             flow.astype('float32').tofile(to_folder_flow + frame_str + ".bin")
 
+
 # Helper to for creating data used in voxel grid
 def get_info(sensor, frame_str, seq_dir):
     points = np.load(seq_dir + "velodyne" + str(sensor) + "/" + frame_str + ".npy") # Point cloud
@@ -148,25 +152,25 @@ def get_info(sensor, frame_str, seq_dir):
     label = np.load(seq_dir + "labels" + str(sensor) + "/" + frame_str + ".npy")
     return [points, instances, flow, label]
 
-def get_inv_transforms(sensors, seq_dir, t_start, t_end):
+
+def get_inv_transforms(sensors, seq_dir, t_frame):
     # Initial transforms (other lidar to ego sensor)
-    inv_transforms = {} 
-    for pose_file in os.listdir(seq_dir + "pose0"):
-        t_frame = pose_file.split(".")[0]
-        frame_str = get_frame_str(t_frame, t_start, t_end)
-        if frame_str:
-            ego_pose = np.load(seq_dir + "pose0/" + pose_file)
-            for sensor in sensors:
-                sensor_pose = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
-                inv_sensor = np.linalg.inv(sensor_pose)
-                inv_transforms[sensor] = np.matmul(ego_pose, inv_sensor)
+    inv_transforms = {}
+    pose_file = t_frame + ".npy"
+    ego_pose = np.load(seq_dir + "pose0/" + pose_file)
+    for sensor in sensors:
+        to_world = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
+        to_ego = np.linalg.inv(ego_pose)
+        inv_transforms[sensor] = np.matmul(to_ego, to_world)
     return inv_transforms
+
 
 # Add points to cylinder grid
 def add_points(points, labels, grid):
     pointlabels = np.hstack((points, labels))
     grid[pointlabels] = grid[pointlabels] + 1
     return grid
+
 
 # Add points along ray to grid
 def ray_trace(point, label, sample_spacing):
@@ -187,13 +191,14 @@ def make_grid(voxel_grid, t_frame, sensors, inv_transforms, free_res, seq_dir):
         [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir)  # Get info for sensor at frame
         for i in range(points.shape[0]):
             temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
-            transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3])  # Convert points to ego frame
-            transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
+            transformed_points = np.dot(inv_transforms[sensor][:3, :3], temp_points.T).T + inv_transforms[sensor][:3, 3]
+            # transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3])  # Convert points to ego frame
+            # transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
             voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
     return voxel_grid
 
 
-def data_from_grid(voxel_grid):
+def data_from_grid(voxel_grid, min_num=1):
     # Save volume
     voxels = voxel_grid.get_voxels()
     min_bound = voxel_grid.min_bound
@@ -205,14 +210,13 @@ def data_from_grid(voxel_grid):
     z = np.linspace(min_bound[2], max_bound[2], num=voxels.shape[2]) + intervals[2] / 2
     xv, yv, zv = np.meshgrid(x, y, z, indexing="ij")
 
-    valid_cells = np.sum(voxels, axis=3) > 0
+    valid_cells = np.sum(voxels, axis=3) >= min_num
     valid_x = xv[valid_cells]
     valid_y = yv[valid_cells]
     valid_z = zv[valid_cells]
     valid_points = np.stack((valid_x, valid_y, valid_z)).T
 
-    labels = np.argmax(voxels, axis=3)
-    valid_labels = labels[valid_cells]
+    valid_labels = np.argmax(voxels[valid_cells], axis=1)
 
     return valid_points, valid_labels
 
@@ -231,12 +235,14 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 15
-    t_end = 615
+    t_start = 50
+    t_end = 150
     dt = 0.1
-    seq_dir = "../Scenes/02/raw/"
-    save_dir = "../Scenes/02/cartesian/"
-    free_res = 100
+    seq_dir = "../Scenes/04/raw/"
+    save_dir = "../Scenes/04/cartesian_v2/"
+    free_res = 0.5
+    min_num = 1
+    NUM_SENSORS = -1 # -1 for all
     
     # Parameters for container: cylindrical
 #     grid_size = np.array([100., 100., 10.])
@@ -246,9 +252,9 @@ def main():
 #     coordinates = "cylindrical"
     
     # Parameters for container: cartesian
-    grid_size = np.array([240., 240., 15.])
-    min_bound = np.array([-40, -40, -2.5], dtype=np.float32)
-    max_bound = np.array([40, 40, 2.5], dtype=np.float32)
+    grid_size = np.array([600., 600., 50.])
+    min_bound = np.array([-30, -30, -2.5], dtype=np.float32)
+    max_bound = np.array([30, 30, 2.5], dtype=np.float32)
     num_channels = 25
     coordinates = "cartesian"
 
@@ -273,8 +279,9 @@ def main():
 
     sensors = glob.glob(seq_dir + "/velodyne*")
     sensors = sorted([int(sensor.split("velodyne")[1]) for sensor in sensors])
+    sensors = sensors[:NUM_SENSORS]
     try:
-        ego_sensor = sensors[1]
+        ego_sensor = sensors[0]
     except IndexError:
         print("Error: less than one sensor found, exiting...")
         return
@@ -286,9 +293,6 @@ def main():
     save_labels(0, False, save_dir, seq_dir, t_start, t_end)
     save_points(0, False, save_dir, seq_dir, t_start, t_end)
 
-    # Get transforms from lidars to ego sensor
-    inv_transforms = get_inv_transforms(sensors, seq_dir, t_start, t_end)
-
     # Whether any measurements were found
     if not os.path.exists(os.path.join(save_dir, "evaluation")):
         os.mkdir(os.path.join(save_dir, "evaluation"))
@@ -298,6 +302,8 @@ def main():
         os.mkdir(os.path.join(save_dir, "evaluation", "completion", "visible"))
     if not os.path.exists(os.path.join(save_dir, "evaluation", "accuracy")):
         os.mkdir(os.path.join(save_dir, "evaluation", "accuracy"))
+    if not os.path.exists(os.path.join(save_dir, "evaluation", "all")):
+        os.mkdir(os.path.join(save_dir, "evaluation", "all"))
 
     copy_bev(t_start, t_end, seq_dir, save_dir)
         
@@ -310,12 +316,18 @@ def main():
         frame_str = get_frame_str(t_frame, t_start, t_end)
 
         if frame_str:
+            # Get transforms from lidars to ego sensor
+            inv_transforms = get_inv_transforms(sensors, seq_dir, t_frame)
+
             all_grid = make_grid(voxel_grid, t_frame, sensors, inv_transforms, free_res, seq_dir)
-            all_points, all_labels = data_from_grid(all_grid)
+            all_points, all_labels = data_from_grid(all_grid, min_num=min_num)
+            print("All:", np.unique(all_labels, return_counts=True))
 
             ego_grid = make_grid(voxel_grid, t_frame, [sensors[0]], inv_transforms, free_res, seq_dir)
-            ego_points, ego_labels = data_from_grid(ego_grid)
+            ego_points, ego_labels = data_from_grid(ego_grid, min_num=min_num)
 
+            temp_ego_points = []
+            temp_ego_labels = []
             occ_points = []
             occ_labels = []
             ego_point_set = set(tuple(ego_points[j, :]) for j in range(ego_labels.shape[0]))
@@ -323,10 +335,17 @@ def main():
                 if tuple(all_points[j, :]) not in ego_point_set:
                     occ_points.append(all_points[j, :])
                     occ_labels.append(all_labels[j])
+                # V2
+                else:
+                    temp_ego_points.append(all_points[j, :])
+                    temp_ego_labels.append(all_labels[j])
+            ego_points = np.array(temp_ego_points)
+            ego_labels = np.array(temp_ego_labels)
 
             occ_points = np.array(occ_points)
             occ_labels = np.array(occ_labels)
-            print(ego_labels.shape, all_labels.shape, occ_labels.shape)
+            print("Ego:", np.unique(ego_labels, return_counts=True))
+            print("Occluded:", np.unique(occ_labels, return_counts=True))
 
             occ_points.astype('float32').tofile(save_dir + "/evaluation/completion/occluded/" + frame_str + ".bin")
             occ_labels.astype('uint32').tofile(save_dir + "/evaluation/completion/occluded/" + frame_str + ".label")
@@ -334,6 +353,8 @@ def main():
             ego_labels.astype('uint32').tofile(save_dir + "/evaluation/completion/visible/" + frame_str + ".label")
             ego_points.astype('float32').tofile(save_dir + "/evaluation/accuracy/" + frame_str + ".bin")
             ego_labels.astype('uint32').tofile(save_dir + "/evaluation/accuracy/" + frame_str + ".label")
+            all_points.astype('float32').tofile(save_dir + "/evaluation/all/" + frame_str + ".bin")
+            all_labels.astype('uint32').tofile(save_dir + "/evaluation/all/" + frame_str + ".label")
 
 
 if __name__ == '__main__':

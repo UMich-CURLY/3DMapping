@@ -31,29 +31,34 @@ LABEL_COLORS = np.array([
     (145, 170, 100), # Terrain
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
 
+
 # vectorized point generation
-def gen_points(load_dir, sensor, frame, vis):
+def gen_points(load_dir, frame):
     """
         min_dim     -
         max_dim     -
         steps       1x3
         c
     """
-    pc = np.load(load_dir + "velodyne" + str(sensor) + "/" + str(frame) + ".npy").reshape(-1, 3)
-    labels = np.load(load_dir + "labels" + str(sensor) + "/" + str(frame) + ".npy")
-    to_world = np.load(load_dir + "pose" + str(sensor) + "/" + str(frame) + ".npy")
+    labels = np.fromfile(load_dir + "labels/" + str(frame).zfill(6) + ".label", dtype=np.uint32)
+    pc = np.fromfile(load_dir + "velodyne/" + str(frame).zfill(6) + ".bin", dtype=np.float32).reshape(-1, 4)[:, :3]
+    pose = np.loadtxt(load_dir + "poses.txt", dtype=np.float32).reshape(-1, 12)[int(frame), :].reshape(3, 4)
+    # labels = np.load("/home/tigeriv/Data/Carla/Data/Scenes/03/raw/labels0/" + str(frame) + ".npy")
+    # pc = np.load("/home/tigeriv/Data/Carla/Data/Scenes/03/raw/velodyne0/" + str(frame) + ".npy")
+    # pose = np.load("/home/tigeriv/Data/Carla/Data/Scenes/03/raw/pose0/" + str(frame) + ".npy")
 
-    ego_pose = np.load(load_dir + "pose" + str(0) + "/" + str(frame) + ".npy")
-    to_ego = np.linalg.inv(ego_pose)
-    to_ego = np.matmul(to_ego, to_world)
+    # pc = np.append(pc, np.ones((pc.shape[0], 1)), axis=1)
+    # pc = np.dot(pose, pc.T).T
+    # pc = pc[:, :-1]
+    # print(pc.shape)
 
-    pc = np.dot(to_ego[:3, :3], pc.T).T + to_ego[:3, 3]
+    pc = np.dot(pose[:3, :3], pc.T).T + pose[:3, 3]
+    print(pc.shape)
     
     # add to point lists
     point_list = o3d.geometry.PointCloud()     
     point_list.points = o3d.utility.Vector3dVector(pc)
     point_list.colors = o3d.utility.Vector3dVector(LABEL_COLORS[labels])
-
     return point_list
 
 # test code
@@ -61,8 +66,8 @@ def gen_points(load_dir, sensor, frame, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Scenes/04/raw/"
-        sensors = [i for i in range(10)]
+        load_dir = "../Scenes/04/cartesian/"
+        sensor = 0
         vis.create_window(
             window_name='Segmented Scene',
             width=960,
@@ -73,23 +78,21 @@ def main():
         vis.get_render_option().point_size = 3
 
         # Load frames
-        frame = 7
-        point_list = o3d.geometry.PointCloud()
-        for sensor in sensors:
-            point_list = point_list + gen_points(load_dir, sensor, frame, vis)
+        frame = 0
+        point_list = gen_points(load_dir, frame)
         geometry = o3d.geometry.PointCloud(point_list)
         vis.add_geometry(geometry)
         while True:
             print("frame:", frame)
-            point_list = o3d.geometry.PointCloud()
 
-            for sensor in sensors:
-                point_list = point_list + gen_points(load_dir, sensor, frame, vis)
+            new_list = gen_points(load_dir, frame)
+            point_list = point_list + new_list
+            # point_list = gen_points(load_dir, frame)
             
             geometry.points = point_list.points
             geometry.colors = point_list.colors
 
-            vis.update_geometry( geometry)
+            vis.update_geometry(geometry)
             
             for i in range(10):
                 vis.poll_events()

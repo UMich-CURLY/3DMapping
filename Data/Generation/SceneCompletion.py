@@ -147,19 +147,18 @@ def get_info(sensor, frame_str, seq_dir):
     label = np.load(seq_dir + "labels" + str(sensor) + "/" + frame_str + ".npy")
     return [points, instances, flow, label]
 
-def get_inv_transforms(sensors, seq_dir, t_start, t_end):
+
+def get_inv_transforms(sensors, seq_dir, t_frame):
     # Initial transforms (other lidar to ego sensor)
-    inv_transforms = {} 
-    for pose_file in os.listdir(seq_dir + "pose0"):
-        t_frame = pose_file.split(".")[0]
-        frame_str = get_frame_str(t_frame, t_start, t_end)
-        if frame_str:
-            ego_pose = np.load(seq_dir + "pose0/" + pose_file)
-            for sensor in sensors:
-                sensor_pose = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
-                inv_sensor = np.linalg.inv(sensor_pose)
-                inv_transforms[sensor] = np.matmul(ego_pose, inv_sensor)
+    inv_transforms = {}
+    pose_file = t_frame + ".npy"
+    ego_pose = np.load(seq_dir + "pose0/" + pose_file)
+    for sensor in sensors:
+        to_world = np.load(seq_dir + "pose" + str(sensor) + "/" + pose_file)
+        to_ego = np.linalg.inv(ego_pose)
+        inv_transforms[sensor] = np.matmul(to_ego, to_world)
     return inv_transforms
+
 
 # Add points to cylinder grid
 def add_points(points, labels, grid):
@@ -195,26 +194,27 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 15
-    t_end = 615
+    t_start = 100
+    t_end = 150
     dt = 0.1
-    seq_dir = "../Scenes/02/raw/"
-    save_dir = "../Scenes/02/cylindrical/"
+    seq_dir = "../Scenes/04/raw/"
+    save_dir = "../Scenes/04/cylindrical/"
     free_res = 1.5
     
     # Parameters for container: cylindrical
-    grid_size = np.array([100., 100., 10.])
-    min_bound = np.array([0, -1.0*np.pi, -2.5], dtype=np.float32)
-    max_bound = np.array([40, 1.0*np.pi, 2.5], dtype=np.float32)
+    grid_size = np.array([128., 128., 16.])
+    min_bound = np.array([0, -1.0*np.pi, -2.0], dtype=np.float32)
+    max_bound = np.array([30, 1.0*np.pi, 1.0], dtype=np.float32)
     num_channels = 25
     coordinates = "cylindrical"
-    
+    NUM_SENSORS = -1 # -1 for all
+
     # Parameters for container: cartesian
-#    grid_size = np.array([100., 100., 10.])
-#    min_bound = np.array([-20, -20, -2.5], dtype=np.float32)
-#    max_bound = np.array([20, 20, 2.5], dtype=np.float32)
-#    num_channels = 25
-#    coordinates = "cartesian"
+    # grid_size = np.array([100., 100., 10.])
+    # min_bound = np.array([-20, -20, -2.5], dtype=np.float32)
+    # max_bound = np.array([20, 20, 2.5], dtype=np.float32)
+    # num_channels = 25
+    # coordinates = "cartesian"
 
     # Initialize grid
     voxel_grid = initialize_grid(grid_size=grid_size,
@@ -237,8 +237,9 @@ def main():
 
     sensors = glob.glob(seq_dir + "velodyne*")
     sensors = sorted([int(sensor.split("velodyne")[1]) for sensor in sensors])
+    sensors = sensors[:NUM_SENSORS]
     try:
-        ego_sensor = sensors[1]
+        ego_sensor = sensors[0]
     except IndexError:
         print("Error: less than one sensor found, exiting...")
         return
@@ -249,9 +250,6 @@ def main():
     poses, sorted_poses_all, inv_first = load_poses(sensors, save_dir, seq_dir, t_start, t_end)
     save_labels(0, False, save_dir, seq_dir, t_start, t_end)
     save_points(0, False, save_dir, seq_dir, t_start, t_end)
-
-    # Get transforms from lidars to ego sensor
-    inv_transforms = get_inv_transforms(sensors, seq_dir, t_start, t_end)
 
     # Whether any measurements were found
     if not os.path.exists(os.path.join(save_dir, "evaluation")):
@@ -271,6 +269,7 @@ def main():
         if frame_str:
             for sensor in sensors:
                 [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
+                inv_transforms = get_inv_transforms(sensors, seq_dir, t_frame)
                 for i in range(points.shape[0]):
                     temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
                     transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
@@ -279,8 +278,8 @@ def main():
                     
             # Save volume
             voxels = voxel_grid.get_voxels()
+            labels = np.argmax(voxels, axis=3)
             voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
-            print(voxels.shape)
             voxels.astype('float32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".bin"))
 
 
