@@ -239,7 +239,7 @@ def main():
     t_end = 150
     dt = 0.1
     seq_dir = "../Scenes/04/raw/"
-    save_dir = "../Scenes/04/cartesian_v2/"
+    save_dir = "../Scenes/04/cartesian/"
     free_res = 0.5
     min_num = 1
     NUM_SENSORS = -1 # -1 for all

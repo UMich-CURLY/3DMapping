@@ -195,19 +195,19 @@ def main():
     Initialize settings and data structures
     """
     t_start = 100
-    t_end = 150
+    t_end = 1900
     dt = 0.1
-    seq_dir = "../Scenes/04/raw/"
-    save_dir = "../Scenes/04/cylindrical/"
-    free_res = 1.5
+    seq_dir = "../Scenes/Town01/raw/"
+    save_dir = "../Scenes/Town01/cylindrical/"
+    free_res = 0.5
     
     # Parameters for container: cylindrical
-    grid_size = np.array([128., 128., 16.])
+    grid_size = np.array([128., 128., 8.])
     min_bound = np.array([0, -1.0*np.pi, -2.0], dtype=np.float32)
     max_bound = np.array([30, 1.0*np.pi, 1.0], dtype=np.float32)
     num_channels = 25
     coordinates = "cylindrical"
-    NUM_SENSORS = -1 # -1 for all
+    NUM_SENSORS = 10 # -1 for all
 
     # Parameters for container: cartesian
     # grid_size = np.array([100., 100., 10.])
