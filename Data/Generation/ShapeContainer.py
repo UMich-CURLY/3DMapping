@@ -115,8 +115,9 @@ class ShapeContainer:
         valid_xyz_pol   = xyz_pol[valid_input_mask]
         valid_labels    = labels[valid_input_mask]
 
+        # Add 0.4 due to floating point errors in rounding
         grid_ind = (np.floor((valid_xyz_pol
-                    - self.min_bound) / self.intervals)).astype(np.int)
+                    - self.min_bound) / self.intervals + 0.4)).astype(np.int)
         grid_ind = np.hstack( (grid_ind, valid_labels) )
         return grid_ind
 

@@ -185,16 +185,40 @@ def ray_trace(point, label, sample_spacing):
     return new_points, np.asarray(labels).reshape(-1, 1)
 
 
+# Add points along ray to grid
+def ray_trace_batch(points, labels, sample_spacing):
+    points = points[labels != 0]
+    labels = labels[labels != 0]
+    # Compute samples using array broadcasting
+    vec_norms = np.reshape(np.linalg.norm(points, axis=1), (-1, 1))
+    vec_angles = points / vec_norms
+    difs = np.reshape(np.arange(0.0, 100.0, sample_spacing), (1, -1, 1))
+    difs = np.reshape(vec_angles, (-1, 1, 3)) * difs
+    new_samples = np.reshape(points, (-1, 1, 3)) - difs
+
+    # Create labels
+    new_labels = np.zeros((new_samples.shape[0], new_samples.shape[1]))
+    new_labels[:, 0] = labels
+    new_labels = new_labels.reshape(-1)
+
+    # Remove points with dist < 0
+    vec_dists = new_samples / np.reshape(vec_angles, (-1, 1, 3))
+    first_pts = vec_dists[:, 0, 0]
+    good_samples = np.reshape(new_samples[vec_dists[:, :, 0] > 0], (-1, 3))
+    good_labels = new_labels[vec_dists[:, :, 0].reshape(-1) > 0]
+
+    return good_samples, np.reshape(good_labels, (-1, 1))
+
+
 def make_grid(voxel_grid, t_frame, sensors, inv_transforms, free_res, seq_dir):
     voxel_grid.reset_grid()
     for sensor in sensors:
         [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir)  # Get info for sensor at frame
-        for i in range(points.shape[0]):
-            temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
-            transformed_points = np.dot(inv_transforms[sensor][:3, :3], temp_points.T).T + inv_transforms[sensor][:3, 3]
-            # transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3])  # Convert points to ego frame
-            # transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
-            voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
+        temp_points, temp_labels = ray_trace_batch(points, label, free_res)
+        transformed_points = np.dot(inv_transforms[sensor][:3, :3], temp_points.T).T + inv_transforms[sensor][:3, 3]
+        # transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3])  # Convert points to ego frame
+        # transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
+        voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
     return voxel_grid
 
 

@@ -180,6 +180,31 @@ def ray_trace(point, label, sample_spacing):
     return new_points, np.asarray(labels).reshape(-1, 1)
 
 
+# Add points along ray to grid
+def ray_trace_batch(points, labels, sample_spacing):
+    points = points[labels != 0]
+    labels = labels[labels != 0]
+    # Compute samples using array broadcasting
+    vec_norms = np.reshape(np.linalg.norm(points, axis=1), (-1, 1))
+    vec_angles = points / vec_norms
+    difs = np.reshape(np.arange(0.0, 100.0, sample_spacing), (1, -1, 1))
+    difs = np.reshape(vec_angles, (-1, 1, 3)) * difs
+    new_samples = np.reshape(points, (-1, 1, 3)) - difs
+
+    # Create labels
+    new_labels = np.zeros((new_samples.shape[0], new_samples.shape[1]))
+    new_labels[:, 0] = labels
+    new_labels = new_labels.reshape(-1)
+
+    # Remove points with dist < 0
+    vec_dists = new_samples / np.reshape(vec_angles, (-1, 1, 3))
+    first_pts = vec_dists[:, 0, 0]
+    good_samples = np.reshape(new_samples[vec_dists[:, :, 0] > 0], (-1, 3))
+    good_labels = new_labels[vec_dists[:, :, 0].reshape(-1) > 0]
+
+    return good_samples, np.reshape(good_labels, (-1, 1))
+
+
 def copy_bev(t_start, t_end, seq_dir, save_dir):
     if not os.path.exists(os.path.join(save_dir, "bev")):
         os.mkdir(os.path.join(save_dir, "bev"))
@@ -197,8 +222,8 @@ def main():
     t_start = 100
     t_end = 1900
     dt = 0.1
-    seq_dir = "../Scenes/Town01/raw/"
-    save_dir = "../Scenes/Town01/cylindrical/"
+    seq_dir = "../Scenes/Town06_Heavy/raw/"
+    save_dir = "../Scenes/Town06_Heavy/cylindrical/"
     free_res = 0.5
     
     # Parameters for container: cylindrical
@@ -267,20 +292,20 @@ def main():
         frame_str = get_frame_str(t_frame, t_start, t_end)
 
         if frame_str:
+            inv_transforms = get_inv_transforms(sensors, seq_dir, t_frame)
             for sensor in sensors:
-                [points, instances, flow, label] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
-                inv_transforms = get_inv_transforms(sensors, seq_dir, t_frame)
-                for i in range(points.shape[0]):
-                    temp_points, temp_labels = ray_trace(points[i, :], label[i], free_res)
-                    transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
-                    transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
-                    voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
+                [points, instances, flow, labels] = get_info(sensor, t_frame, seq_dir) # Get info for sensor at frame
+                temp_points, temp_labels = ray_trace_batch(points, labels, free_res)
+                transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
+                transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
+                voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
+                labels = np.argmax(voxel_grid.get_voxels(), axis=3)
                     
-            # Save volume
-            voxels = voxel_grid.get_voxels()
-            labels = np.argmax(voxels, axis=3)
-            voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
-            voxels.astype('float32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".bin"))
+        # Save volume
+        voxels = voxel_grid.get_voxels()
+        labels = np.argmax(voxels, axis=3)
+        voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
+        voxels.astype('float32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".bin"))
 
 
 if __name__ == '__main__':
