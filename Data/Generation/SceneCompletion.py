@@ -219,27 +219,31 @@ def main():
     """
     Initialize settings and data structures
     """
+    cylindrical = True
+    parent_dir = "../Scenes/Town07_Light/"
     t_start = 100
     t_end = 1900
     dt = 0.1
-    seq_dir = "../Scenes/Town06_Heavy/raw/"
-    save_dir = "../Scenes/Town06_Heavy/cylindrical/"
-    free_res = 0.5
-    
-    # Parameters for container: cylindrical
-    grid_size = np.array([128., 128., 8.])
-    min_bound = np.array([0, -1.0*np.pi, -2.0], dtype=np.float32)
-    max_bound = np.array([30, 1.0*np.pi, 1.0], dtype=np.float32)
-    num_channels = 25
-    coordinates = "cylindrical"
-    NUM_SENSORS = 10 # -1 for all
+    free_res = 1.5
 
+    seq_dir = parent_dir + "raw/"
+
+    # Parameters for container: cylindrical
+    if cylindrical:
+        grid_size = np.array([128., 128., 8.])
+        min_bound = np.array([0, -1.0*np.pi, -2.0], dtype=np.float32)
+        max_bound = np.array([30, 1.0*np.pi, 1.0], dtype=np.float32)
+        num_channels = 25
+        coordinates = "cylindrical"
+        save_dir = parent_dir + "cylindrical/"
     # Parameters for container: cartesian
-    # grid_size = np.array([100., 100., 10.])
-    # min_bound = np.array([-20, -20, -2.5], dtype=np.float32)
-    # max_bound = np.array([20, 20, 2.5], dtype=np.float32)
-    # num_channels = 25
-    # coordinates = "cartesian"
+    else:
+        grid_size = np.array([128., 128., 8.])
+        min_bound = np.array([-25.6, -25.6, -2.0], dtype=np.float32)
+        max_bound = np.array([25.6, 25.6, 1.0], dtype=np.float32)
+        num_channels = 25
+        coordinates = "cartesian"
+        save_dir = parent_dir + "cartesian/"
 
     # Initialize grid
     voxel_grid = initialize_grid(grid_size=grid_size,
@@ -262,7 +266,6 @@ def main():
 
     sensors = glob.glob(seq_dir + "velodyne*")
     sensors = sorted([int(sensor.split("velodyne")[1]) for sensor in sensors])
-    sensors = sensors[:NUM_SENSORS]
     try:
         ego_sensor = sensors[0]
     except IndexError:
@@ -299,13 +302,13 @@ def main():
                 transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
                 transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
                 voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
-                labels = np.argmax(voxel_grid.get_voxels(), axis=3)
                     
-        # Save volume
+        # Save volume - counts per cell, and argmax per cell
         voxels = voxel_grid.get_voxels()
         labels = np.argmax(voxels, axis=3)
-        voxels = np.transpose(voxels, axes=(3, 0, 1, 2))
-        voxels.astype('float32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".bin"))
+        counts = np.sum(voxels, axis=3)
+        labels.astype('uint32').tofile(os.path.join(save_dir, "evaluation/",  frame_str + ".label"))
+        counts.astype('float32').tofile(os.path.join(save_dir, "evaluation/", frame_str + ".bin"))
 
 
 if __name__ == '__main__':

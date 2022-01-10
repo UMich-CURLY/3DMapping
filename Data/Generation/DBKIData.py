@@ -259,14 +259,14 @@ def main():
     """
     Initialize settings and data structures
     """
-    t_start = 50
-    t_end = 150
+    t_start = 65
+    t_end = 265
     dt = 0.1
-    seq_dir = "../Scenes/04/raw/"
-    save_dir = "../Scenes/04/cartesian/"
-    free_res = 0.5
+    parent_dir = "../Scenes/Town01_Heavy/"
+    seq_dir = parent_dir + "raw/"
+    save_dir = parent_dir + "dbki/"
+    free_res = 1.5
     min_num = 1
-    NUM_SENSORS = -1 # -1 for all
     
     # Parameters for container: cylindrical
 #     grid_size = np.array([100., 100., 10.])
@@ -303,7 +303,6 @@ def main():
 
     sensors = glob.glob(seq_dir + "/velodyne*")
     sensors = sorted([int(sensor.split("velodyne")[1]) for sensor in sensors])
-    sensors = sensors[:NUM_SENSORS]
     try:
         ego_sensor = sensors[0]
     except IndexError:

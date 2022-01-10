@@ -16,7 +16,7 @@ from CarlaUtils import *
 def main(arg):
     """Main function of the script"""
     client = carla.Client(arg["host"], arg["port"])
-    client.set_timeout(2.0)
+    client.set_timeout(5.0)
     world = client.get_world()
     print("Available worlds:", client.get_available_maps())
     if arg["new_world"]:
@@ -76,7 +76,7 @@ def main(arg):
             if i == 0: # Onboard sensor
                 offsets = [-0.5, 0.0, 1.8]
             else:
-                offsets = np.random.uniform([-10, -10, 1], [10, 10, 5], [3,])
+                offsets = np.random.uniform([-20, -20, 1], [20, 20, 5], [3,])
 
             lidar_bp = generate_lidar_bp(arg, world, blueprint_library, delta)
             # Location of lidar, fixed to vehicle
@@ -160,11 +160,11 @@ if __name__ == "__main__":
         "range": 50,
         "points_per_second": 1300000,
         "show_axis": True,
-        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/Town01_Light/raw",
-        "num_vehicles": 10,
-        "num_walkers": 10,
-        "new_world": "/Game/Carla/Maps/Town01_Opt",
-        "num_sensors": 10
+        "storage_dir": "/home/tigeriv/Data/Carla/Data/Scenes/Town07_Light/raw",
+        "num_vehicles": 25,
+        "num_walkers": 25,
+        "new_world": "/Game/Carla/Maps/Town07",
+        "num_sensors": 20
     }
 
     try:

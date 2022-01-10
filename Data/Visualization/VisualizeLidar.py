@@ -61,8 +61,8 @@ def gen_points(load_dir, sensor, frame, vis):
 def main():
     vis = o3d.visualization.Visualizer()
     try: 
-        load_dir = "../Scenes/04/raw/"
-        sensors = [i for i in range(10)]
+        load_dir = "../Scenes/Town01_Heavy/raw/"
+        sensors = [i for i in range(20)]
         vis.create_window(
             window_name='Segmented Scene',
             width=960,
@@ -73,7 +73,7 @@ def main():
         vis.get_render_option().point_size = 3
 
         # Load frames
-        frame = 7
+        frame = 0
         point_list = o3d.geometry.PointCloud()
         for sensor in sensors:
             point_list = point_list + gen_points(load_dir, sensor, frame, vis)
@@ -91,7 +91,7 @@ def main():
 
             vis.update_geometry( geometry)
             
-            for i in range(10):
+            for i in range(1000):
                 vis.poll_events()
                 vis.update_renderer()
                 time.sleep(0.005)

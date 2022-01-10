@@ -20,9 +20,9 @@ LABEL_COLORS = np.array([
     (255, 255, 0),   # Pedestrian
     (153, 153, 153), # Pole
     (157, 234, 50),  # RoadLines
-    (0, 0, 50),  # Road
-    (0, 0, 50),  # Sidewalk
-    (107, 142, 35),  # Vegetation
+    (0, 0, 255),  # Road
+    (255, 255, 255),  # Sidewalk
+    (0, 155, 0),  # Vegetation
     (255, 0, 0),     # Vehicle
     (102, 102, 156), # Wall
     (220, 220, 0),   # TrafficSign
@@ -37,7 +37,6 @@ LABEL_COLORS = np.array([
     (45, 60, 150),   # Water
     (145, 170, 100), # Terrain
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
-
 
 def add_open3d_axis(vis):
     """Add a small 3D axis on Open3D Visualizer"""
@@ -127,7 +126,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = {
-        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/04/cartesian_v2/evaluation/all/"
+        "load_dir": "/home/tigeriv/Data/Carla/Data/Scenes/Town01_Heavy/dbki/evaluation/all/"
     }
 
     try:

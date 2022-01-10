@@ -39,7 +39,7 @@ class ShapeContainer:
                     calling function
         """
         crop_range = self.max_bound - self.min_bound
-        self.intervals = crop_range / (self.grid_size - 1)
+        self.intervals = crop_range / self.grid_size
 
         if (self.intervals == 0).any(): 
             print("Error zero interval detected...")
@@ -115,9 +115,12 @@ class ShapeContainer:
         valid_xyz_pol   = xyz_pol[valid_input_mask]
         valid_labels    = labels[valid_input_mask]
 
-        # Add 0.4 due to floating point errors in rounding
         grid_ind = (np.floor((valid_xyz_pol
-                    - self.min_bound) / self.intervals + 0.4)).astype(np.int)
+                    - self.min_bound) / self.intervals)).astype(np.int)
+        # Clip due to edge cases
+        maxes = np.reshape(self.grid_size - 1, (1, 3))
+        mins = np.zeros_like(maxes)
+        grid_ind = np.clip(grid_ind, mins, maxes)
         grid_ind = np.hstack( (grid_ind, valid_labels) )
         return grid_ind
 
