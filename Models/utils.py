@@ -3,7 +3,33 @@ import open3d as o3d
 import time
 import torch
 import torch.nn as nn
+import random
 
+frequencies_cartesian = np.asarray([
+    4166593275,
+    42309744,
+    8550180,
+    478193,
+    905663,
+    2801091,
+    6452733,
+    229316930,
+    112863867,
+    29816894,
+    13839655,
+    15581458,
+    221821,
+    0,
+    7931550,
+    467989,
+    3354,
+    9201043,
+    61011,
+    3796746,
+    3217865,
+    215372,
+    79669695
+    ])
 
 LABEL_COLORS = np.array([
     (255, 255, 255), # None
@@ -110,7 +136,14 @@ def visualize_preds(probs, min_dim, max_dim, num_samples=10, vis=None, geometry=
     return vis, geometry
 
 
-def visualize_set(model, dataloader, carla_ds, cylindrical):
+def setup_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+
+def visualize_set(model, dataloader, carla_ds, cylindrical, min_thresh=0.75):
     model.eval()
     vis = None
     geometry = None
@@ -123,8 +156,8 @@ def visualize_set(model, dataloader, carla_ds, cylindrical):
             input_data = torch.tensor(input_data).to(carla_ds.device)
             preds = model(input_data)
 
-            probs = nn.functional.softmax(preds, dim = 4)
+            probs = nn.functional.softmax(preds, dim=4)
             vis, geometry = visualize_preds(probs[0].detach().cpu().numpy(), 
                             np.asarray(carla_ds._eval_param['min_bound']), 
                             np.asarray(carla_ds._eval_param['max_bound']),
-                            cylindrical=cylindrical, vis=vis, geometry=geometry)
+                            cylindrical=cylindrical, vis=vis, geometry=geometry, min_thresh=min_thresh)
