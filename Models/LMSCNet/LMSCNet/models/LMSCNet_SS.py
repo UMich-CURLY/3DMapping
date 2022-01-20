@@ -56,9 +56,10 @@ class LMSCNet_SS(nn.Module):
 
     super().__init__()
     self.nbr_classes = class_num
+    # MODIFIED: (X, Y, Z)
     self.input_dimensions = input_dimensions  # Grid dimensions should be (W, H, D).. z or height being axis 1
     self.class_frequencies = class_frequencies
-    f = self.input_dimensions[1]
+    f = self.input_dimensions[2]
 
     self.pool = nn.MaxPool2d(2)  # [F=2; S=2; P=0; D=1]
 
@@ -114,10 +115,12 @@ class LMSCNet_SS(nn.Module):
     self.conv1_1            = nn.Conv2d(int(f/8) + int(f/4) + int(f/2) + int(f), f, kernel_size=3, padding=1, stride=1)
     self.seg_head_1_1       = SegmentationHead(1, 8, self.nbr_classes, [1, 2, 3])
 
+  # MODIFIED: FEED IN AS (B, T, X, Y, Z)
   def forward(self, x):
+    input = torch.squeeze(x, dim=1)
 
-    input = x['3D_OCCUPANCY']  # Input to LMSCNet model is 3D occupancy big scale (1:1) [bs, 1, W, H, D]
-    input = torch.squeeze(input, dim=1).permute(0, 2, 1, 3)  # Reshaping to the right way for 2D convs [bs, H, W, D]
+    # input = x['3D_OCCUPANCY']  # Input to LMSCNet model is 3D occupancy big scale (1:1) [bs, 1, W, H, D]
+    # input = torch.squeeze(input, dim=1).permute(0, 2, 1, 3)  # Reshaping to the right way for 2D convs [bs, H, W, D]
 
     # Encoder block
     _skip_1_1 = self.Encoder_block1(input)
@@ -147,7 +150,7 @@ class LMSCNet_SS(nn.Module):
     out_scale_1_1__3D = self.seg_head_1_1(out_scale_1_1__2D)
 
     # Take back to [W, H, D] axis order
-    out_scale_1_1__3D = out_scale_1_1__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
+    # out_scale_1_1__3D = out_scale_1_1__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
 
     scores = {'pred_semantic_1_1': out_scale_1_1__3D}
 

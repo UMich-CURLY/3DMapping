@@ -18,6 +18,7 @@ class MotionSC(nn.Module):
         self.segmentation_head = SegmentationHead(1, 8, 23, [1, 2, 3]).to(device)
         self.stpn = STPN(height_feat_size=self.grid_dims[2], cell_feat_size=grid_dims[2]).to(device)
         self.binary = binary
+
     def forward(self, x_in):
         # After grid is constructed, pass through model
         x = torch.permute(x_in, (0, 1, 4, 2, 3))
@@ -26,3 +27,11 @@ class MotionSC(nn.Module):
         x_out = self.segmentation_head(x) # Output is B x C x Z x H x W
         
         return x_out.permute(0, 3, 4, 2, 1)
+
+    def weights_initializer(self, m):
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_uniform_(m.weight)
+            nn.init.zeros_(m.bias)
+
+    def weights_init(self):
+        self.apply(self.weights_initializer)

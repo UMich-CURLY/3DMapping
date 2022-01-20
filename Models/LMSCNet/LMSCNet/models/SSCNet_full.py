@@ -47,9 +47,10 @@ class SSCNet_full(nn.Module):
 
     return
 
+  # MODIFIED: FEED IN AS (B, T, X, Y, Z)
   def forward(self, x):
-
-    input = x['3D_OCCUPANCY'].permute(0, 1, 3, 2, 4) # Reshaping [bs, H, W, D]
+    input = torch.squeeze(x, dim=1)
+    # input = x['3D_OCCUPANCY'].permute(0, 1, 3, 2, 4) # Reshaping [bs, H, W, D]
 
     out = F.relu(self.conv1_1(input))
     out_add_1 = self.reduction2_1(out)

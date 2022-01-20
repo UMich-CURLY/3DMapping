@@ -49,7 +49,6 @@ class SSCNet(nn.Module):
     return
 
   def forward(self, x):
-
     input = x['3D_OCCUPANCY'].permute(0, 1, 3, 2, 4) # Reshaping [bs, H, W, D]
 
     out = F.relu(self.conv1_1(input))

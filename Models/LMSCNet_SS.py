@@ -46,7 +46,7 @@ class SegmentationHead(nn.Module):
     return x_in
 
 
-class LMSCNet(nn.Module):
+class LMSCNet_SS(nn.Module):
 
   def __init__(self, class_num, input_dimensions, class_frequencies):
     '''
@@ -56,8 +56,7 @@ class LMSCNet(nn.Module):
 
     super().__init__()
     self.nbr_classes = class_num
-    # MODIFIED: (X, Y, Z)
-    self.input_dimensions = input_dimensions  # Grid dimensions should be (W, H, D).. z or height being axis 1
+    self.input_dimensions = input_dimensions  # (X, Y, Z)
     self.class_frequencies = class_frequencies
     f = self.input_dimensions[2]
 
@@ -96,7 +95,6 @@ class LMSCNet(nn.Module):
 
     # Treatment output 1:8
     self.conv_out_scale_1_8 = nn.Conv2d(int(f*2.5), int(f/8), kernel_size=3, padding=1, stride=1)
-    self.seg_head_1_8       = SegmentationHead(1, 8, self.nbr_classes, [1, 2, 3])
     self.deconv_1_8__1_2    = nn.ConvTranspose2d(int(f/8), int(f/8), kernel_size=4, padding=0, stride=4)
     self.deconv_1_8__1_1    = nn.ConvTranspose2d(int(f/8), int(f/8), kernel_size=8, padding=0, stride=8)
 
@@ -104,14 +102,12 @@ class LMSCNet(nn.Module):
     self.deconv1_8          = nn.ConvTranspose2d(int(f/8), int(f/8), kernel_size=6, padding=2, stride=2)
     self.conv1_4            = nn.Conv2d(int(f*2) + int(f/8), int(f*2), kernel_size=3, padding=1, stride=1)
     self.conv_out_scale_1_4 = nn.Conv2d(int(f*2), int(f/4), kernel_size=3, padding=1, stride=1)
-    self.seg_head_1_4       = SegmentationHead(1, 8, self.nbr_classes, [1, 2, 3])
     self.deconv_1_4__1_1    = nn.ConvTranspose2d(int(f/4), int(f/4), kernel_size=4, padding=0, stride=4)
 
     # Treatment output 1:2
     self.deconv1_4          = nn.ConvTranspose2d(int(f/4), int(f/4), kernel_size=6, padding=2, stride=2)
     self.conv1_2            = nn.Conv2d(int(f*1.5) + int(f/4) + int(f/8), int(f*1.5), kernel_size=3, padding=1, stride=1)
     self.conv_out_scale_1_2 = nn.Conv2d(int(f*1.5), int(f/2), kernel_size=3, padding=1, stride=1)
-    self.seg_head_1_2       = SegmentationHead(1, 8, self.nbr_classes, [1, 2, 3])
 
     # Treatment output 1:1
     self.deconv1_2          = nn.ConvTranspose2d(int(f/2), int(f/2), kernel_size=6, padding=2, stride=2)
@@ -120,10 +116,8 @@ class LMSCNet(nn.Module):
 
   # MODIFIED: FEED IN AS (B, T, X, Y, Z)
   def forward(self, x):
+    x = torch.permute(x, (0, 1, 4, 2, 3))
     input = torch.squeeze(x, dim=1)
-
-    # input = x['3D_OCCUPANCY']  # Input to LMSCNet model is 3D occupancy big scale (1:1) [bs, 1, W, H, D]
-    # input = torch.squeeze(input, dim=1).permute(0, 2, 1, 3)  # Reshaping to the right way for 2D convs [bs, H, W, D]
 
     # Encoder block
     _skip_1_1 = self.Encoder_block1(input)
@@ -133,22 +127,18 @@ class LMSCNet(nn.Module):
 
     # Out 1_8
     out_scale_1_8__2D = self.conv_out_scale_1_8(_skip_1_8)
-    out_scale_1_8__3D = self.seg_head_1_8(out_scale_1_8__2D)
 
     # Out 1_4
     out = self.deconv1_8(out_scale_1_8__2D)
     out = torch.cat((out, _skip_1_4), 1)
     out = F.relu(self.conv1_4(out))
     out_scale_1_4__2D = self.conv_out_scale_1_4(out)
-    out_scale_1_4__3D = self.seg_head_1_4(out_scale_1_4__2D)
-    print(out.shape, out_scale_1_4__2D.shape, out_scale_1_4__3D.shape)
 
     # Out 1_2
     out = self.deconv1_4(out_scale_1_4__2D)
     out = torch.cat((out, _skip_1_2, self.deconv_1_8__1_2(out_scale_1_8__2D)), 1)
     out = F.relu(self.conv1_2(out))
     out_scale_1_2__2D = self.conv_out_scale_1_2(out)
-    out_scale_1_2__3D = self.seg_head_1_2(out_scale_1_2__2D)
 
     # Out 1_1
     out = self.deconv1_2(out_scale_1_2__2D)
@@ -156,16 +146,7 @@ class LMSCNet(nn.Module):
     out_scale_1_1__2D = F.relu(self.conv1_1(out))
     out_scale_1_1__3D = self.seg_head_1_1(out_scale_1_1__2D)
 
-    # Take back to [W, H, D] axis order
-    # out_scale_1_8__3D = out_scale_1_8__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
-    # out_scale_1_4__3D = out_scale_1_4__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
-    # out_scale_1_2__3D = out_scale_1_2__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
-    # out_scale_1_1__3D = out_scale_1_1__3D.permute(0, 1, 3, 2, 4)  # [bs, C, H, W, D] -> [bs, C, W, H, D]
-
-    scores = {'pred_semantic_1_1': out_scale_1_1__3D, 'pred_semantic_1_2': out_scale_1_2__3D,
-              'pred_semantic_1_4': out_scale_1_4__3D, 'pred_semantic_1_8': out_scale_1_8__3D}
-
-    return scores
+    return out_scale_1_1__3D.permute(0, 3, 4, 2, 1)
 
   def weights_initializer(self, m):
     if isinstance(m, nn.Conv2d):
@@ -190,14 +171,8 @@ class LMSCNet(nn.Module):
     criterion = nn.CrossEntropyLoss(weight=class_weights, ignore_index=255, reduction='mean').to(device=device)
 
     loss_1_1 = criterion(scores['pred_semantic_1_1'], data['3D_LABEL']['1_1'].long())
-    loss_1_2 = criterion(scores['pred_semantic_1_2'], data['3D_LABEL']['1_2'].long())
-    loss_1_4 = criterion(scores['pred_semantic_1_4'], data['3D_LABEL']['1_4'].long())
-    loss_1_8 = criterion(scores['pred_semantic_1_8'], data['3D_LABEL']['1_8'].long())
 
-    loss_total = (loss_1_1 + loss_1_2 + loss_1_4 + loss_1_8) / 4
-
-    loss = {'total': loss_total, 'semantic_1_1': loss_1_1, 'semantic_1_2': loss_1_2, 'semantic_1_4': loss_1_4,
-            'semantic_1_8': loss_1_8}
+    loss = {'total': loss_1_1, 'semantic_1_1': loss_1_1}
 
     return loss
 
@@ -214,19 +189,18 @@ class LMSCNet(nn.Module):
     '''
     Return the target to use for evaluation of the model
     '''
-    return {'1_1': data['3D_LABEL']['1_1'], '1_2': data['3D_LABEL']['1_2'],
-            '1_4': data['3D_LABEL']['1_4'], '1_8': data['3D_LABEL']['1_8']}
+    return {'1_1': data['3D_LABEL']['1_1']}
     # return data['3D_LABEL']['1_1'] #.permute(0, 2, 1, 3)
 
   def get_scales(self):
     '''
     Return scales needed to train the model
     '''
-    scales = ['1_1', '1_2', '1_4', '1_8']
+    scales = ['1_1']
     return scales
 
   def get_validation_loss_keys(self):
-    return ['total', 'semantic_1_1','semantic_1_2', 'semantic_1_4', 'semantic_1_8']
+    return ['total', 'semantic_1_1']
 
   def get_train_loss_keys(self):
-    return ['total', 'semantic_1_1','semantic_1_2', 'semantic_1_4', 'semantic_1_8']
+    return ['total', 'semantic_1_1']
