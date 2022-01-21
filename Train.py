@@ -89,7 +89,7 @@ else:
 model.weights_init()
 
 # Data Loaders
-carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical)
+carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True)
 dataloader = DataLoader(carla_ds, batch_size=B, shuffle=True, collate_fn=carla_ds.collate_fn, num_workers=num_workers)
 val_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
 dataloader_val = DataLoader(val_ds, batch_size=B, shuffle=True, collate_fn=val_ds.collate_fn, num_workers=num_workers)
