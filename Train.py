@@ -100,6 +100,9 @@ dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=te
 writer = SummaryWriter("./Models/Runs/" + model_name)
 save_dir = "./Models/Weights/" + model_name
 
+if not os.path.exists(save_dir):
+    os.mkdir(save_dir)
+
 if device == "cuda":
     torch.cuda.empty_cache()
 
@@ -127,7 +130,6 @@ for epoch in range(epoch_num):
         output_masked = output[mask]
         preds_masked = preds[mask]
         loss = criterion(preds_masked, output_masked)
-        print(loss)
         loss.backward()
         optimizer.step()
         
