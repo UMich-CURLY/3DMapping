@@ -22,7 +22,8 @@ class CarlaDataset(Dataset):
         num_frames=4,
         cylindrical=True,
         voxelize_input=True,
-        binary_counts=False
+        binary_counts=False,
+        random_flips=False
         ):
         '''Constructor.
         Parameters:
@@ -35,6 +36,7 @@ class CarlaDataset(Dataset):
         self._directory = directory
         self._num_frames = num_frames
         self.device = device
+        self.random_flips = random_flips
         
         self._scenes = sorted(os.listdir(self._directory))
         if cylindrical:
@@ -148,6 +150,18 @@ class CarlaDataset(Dataset):
         
         output = np.fromfile(self._eval_labels[idx_range[-1]],dtype=np.uint32).reshape(self._eval_size).astype(np.uint8)
         counts = np.fromfile(self._eval_counts[idx_range[-1]],dtype=np.float32).reshape(self._eval_size)
+        
+        if self.voxelize_input and self.random_flips:
+            # X flip
+            if np.random.randint(2):
+                output = np.flip(output, axis=0)
+                counts = np.flip(counts, axis=0)
+                current_horizon = np.flip(current_horizon, axis=1) # Because there is a time dimension
+            # Y Flip
+            if np.random.randint(2):
+                output = np.flip(output, axis=1)
+                counts = np.flip(counts, axis=1)
+                current_horizon = np.flip(current_horizon, axis=2) # Because there is a time dimension
 
         return current_horizon, output, counts
         
