@@ -166,6 +166,22 @@ class CarlaDataset(Dataset):
         return current_horizon, output, counts
         
         # no enough frames
+
+    def get_item_scene_name(self, idx):
+        # -1 indicates no data
+        # the final index is the output
+        idx_range = self.find_horizon(idx)
+
+        scene_name = None
+        for i in idx_range:
+            if i == -1: # Zero pad
+                scene_name = "notfound"
+                print("Scene at idx {idx} not found".format(idx=idx))
+            else:
+                scene_name = self._frames_list[i]
+
+        return scene_name
+         
     
     def find_horizon(self, idx):
         end_idx = idx
@@ -176,3 +192,4 @@ class CarlaDataset(Dataset):
         idx_range[good_difs != diffs] = -1
 
         return idx_range
+

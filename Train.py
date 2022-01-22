@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import torch
 import sys
 from torch._C import LongStorageBase
@@ -101,7 +98,7 @@ writer = SummaryWriter("./Models/Runs/" + model_name)
 save_dir = "./Models/Weights/" + model_name
 
 if not os.path.exists(save_dir):
-    os.mkdir(save_dir)
+    os.makedirs(save_dir)
 
 if device == "cuda":
     torch.cuda.empty_cache()
