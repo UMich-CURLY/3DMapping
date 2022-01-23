@@ -58,7 +58,7 @@ LABEL_COLORS = np.array([
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
 
 
-def visualize_preds(probs, min_dim, max_dim, num_samples=10, vis=None, geometry=None, cylindrical=True, display_time=1, min_thresh=0.75):
+def visualize_preds(probs, min_dim, max_dim, num_samples=20, vis=None, geometry=None, cylindrical=True, display_time=1, min_thresh=0.75):
     preds = np.argmax(probs, axis=3)
     max_probs = np.amax(probs, axis=3)
     intervals = (max_dim - min_dim) / preds.shape
@@ -141,6 +141,33 @@ def setup_seed(seed=42):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     random.seed(seed)
+
+
+# Intersection, union for one frame
+def iou_one_frame(pred, target, n_classes=23):
+    pred = pred.view(-1)
+    target = target.view(-1)
+    intersection = np.zeros(n_classes)
+    union = np.zeros(n_classes)
+
+    for cls in range(n_classes):
+        pred_inds = pred == cls
+        target_inds = target == cls
+        intersection[cls] = (pred_inds[target_inds]).long().sum().item()  # Cast to long to prevent overflows
+        union[cls] = pred_inds.long().sum().item() + target_inds.long().sum().item() - intersection[cls]
+    return intersection, union
+
+
+def resample_free_space(flattened_preds, flattened_output):
+    # Occupied indices
+    occupied_indices = (flattened_output != 0).nonzero().view(-1)
+    num_occupied = occupied_indices.shape[0]
+    # Select 2 N free inds randomly, without replacement
+    free_indices = (flattened_output == 0).nonzero()
+    free_indices = free_indices[np.random.choice(free_indices.shape[0], int(2 * num_occupied), replace=False)].view(-1)
+    # Combine and resample predictions, outputs
+    all_indices = torch.cat((occupied_indices, free_indices)).long()
+    return flattened_preds[all_indices], flattened_output[all_indices]
 
 
 def visualize_set(model, dataloader, carla_ds, cylindrical, min_thresh=0.75):

@@ -12,6 +12,33 @@ from torch.utils.data import Dataset
 from Data.Generation.ShapeContainer import ShapeContainer
 
 
+LABELS_REMAP = np.array([
+    0, # Free
+    1, # Building
+    2, # Barrier
+    3, # Other
+    4, # Pedestrian
+    5, # Pole or Traffic Light/Sign
+    7, # Roadline -> Road
+    7, # Road
+    8, # Sidewalk
+    9, # Vegetation
+    10, # Vehicles
+    2, # Wall -> Barrier
+    5, # Traffic Sign -> Pole
+    6, # Sky -> Other
+    11, # Ground
+    6, # Bridge -> Other
+    6, # Railtrack -> Other
+    2, # GuardRail -> Barrier
+    5, # Traffic Light -> Pole
+    6, # Static -> Other
+    6, # Dynamic -> Other
+    6, # Water -> Other
+    11, # Terrain -> Ground
+]) 
+
+
 class CarlaDataset(Dataset):
     """Carla Simulation Dataset for 3D mapping project
     
@@ -23,7 +50,8 @@ class CarlaDataset(Dataset):
         cylindrical=True,
         voxelize_input=True,
         binary_counts=False,
-        random_flips=False
+        random_flips=False,
+        remap=False
         ):
         '''Constructor.
         Parameters:
@@ -37,6 +65,7 @@ class CarlaDataset(Dataset):
         self._num_frames = num_frames
         self.device = device
         self.random_flips = random_flips
+        self.remap = remap
         
         self._scenes = sorted(os.listdir(self._directory))
         if cylindrical:
@@ -162,26 +191,13 @@ class CarlaDataset(Dataset):
                 output = np.flip(output, axis=1)
                 counts = np.flip(counts, axis=1)
                 current_horizon = np.flip(current_horizon, axis=2) # Because there is a time dimension
+                
+        if self.remap:
+            output = LABELS_REMAP[output].astype(np.uint8)
 
         return current_horizon, output, counts
         
         # no enough frames
-
-    def get_item_scene_name(self, idx):
-        # -1 indicates no data
-        # the final index is the output
-        idx_range = self.find_horizon(idx)
-
-        scene_name = None
-        for i in idx_range:
-            if i == -1: # Zero pad
-                scene_name = "notfound"
-                print("Scene at idx {idx} not found".format(idx=idx))
-            else:
-                scene_name = self._frames_list[i]
-
-        return scene_name
-         
     
     def find_horizon(self, idx):
         end_idx = idx
@@ -192,4 +208,3 @@ class CarlaDataset(Dataset):
         idx_range[good_difs != diffs] = -1
 
         return idx_range
-

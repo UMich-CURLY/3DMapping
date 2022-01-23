@@ -6,7 +6,7 @@ from LMSCNet.LMSCNet.models.LMSCNet import SegmentationHead
 
 
 class MotionSC(nn.Module):
-    def __init__(self, voxel_sizes, coor_ranges, grid_dims, device="cuda", T=8, binary=False):
+    def __init__(self, voxel_sizes, coor_ranges, grid_dims, device="cuda", T=8, binary=False, num_classes=23):
         super().__init__()
         self.device = device
         self.T = T
@@ -15,7 +15,7 @@ class MotionSC(nn.Module):
         self.voxel_sizes = torch.tensor(voxel_sizes, device=device)
         self.coor_ranges = coor_ranges
         self.grid_dims = grid_dims
-        self.segmentation_head = SegmentationHead(1, 8, 23, [1, 2, 3]).to(device)
+        self.segmentation_head = SegmentationHead(1, 8, num_classes, [1, 2, 3]).to(device)
         self.stpn = STPN(height_feat_size=self.grid_dims[2], cell_feat_size=grid_dims[2]).to(device)
         self.binary = binary
 

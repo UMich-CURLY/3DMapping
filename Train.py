@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[1]:
+
+
 import torch
 import sys
 from torch._C import LongStorageBase
 
 sys.path.append("./Models")
 from Models.utils import *
-from Data.dataset import CarlaDataset
+from Data.dataset import *
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 import math
@@ -38,16 +41,26 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "LMSC"
-num_workers = 8
-num_classes = 23
+model_name = "SSC"
+num_workers = 16
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Val"
 cylindrical = False
 epoch_num = 500
+remap = True
+resample_free = False
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+if remap:
+    num_classes = 12
+    frequncies_mapped = np.zeros(num_classes)
+    for cls in range(23):
+        frequncies_mapped[LABELS_REMAP[cls]] += frequencies_cartesian[cls]
+    frequencies_cartesian = frequncies_mapped
+else:
+    num_classes = 23
 
 # Weights
 epsilon_w = 0.001  # eps to avoid zero division
@@ -68,7 +81,7 @@ BETA2 = 0.999
 if model_name == "MotionSC":
     B = 16
     T = 16
-    model = MotionSC(voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], T=T, device=device)
+    model = MotionSC(voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], T=T, device=device, num_classes=num_classes)
     decayRate = 0.96
 elif model_name == "LMSC":
     B = 4
@@ -79,6 +92,8 @@ elif model_name == "SSC":
     B = 4
     T = 1
     decayRate = 1.00
+    resample_free = True
+    lr = 0.001
     model = SSCNet(num_classes).to(device)
 else:
     print("Please choose either MotionSC, LMSC, or SSC. Thank you.")
@@ -86,11 +101,11 @@ else:
 model.weights_init()
 
 # Data Loaders
-carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True)
+carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True, remap=remap)
 dataloader = DataLoader(carla_ds, batch_size=B, shuffle=True, collate_fn=carla_ds.collate_fn, num_workers=num_workers)
-val_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
+val_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
 dataloader_val = DataLoader(val_ds, batch_size=B, shuffle=True, collate_fn=val_ds.collate_fn, num_workers=num_workers)
-test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
+test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
 dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
 
 
@@ -98,7 +113,7 @@ writer = SummaryWriter("./Models/Runs/" + model_name)
 save_dir = "./Models/Weights/" + model_name
 
 if not os.path.exists(save_dir):
-    os.makedirs(save_dir)
+    os.mkdir(save_dir)
 
 if device == "cuda":
     torch.cuda.empty_cache()
@@ -126,6 +141,9 @@ for epoch in range(epoch_num):
         mask = counts > 0
         output_masked = output[mask]
         preds_masked = preds[mask]
+        if resample_free:
+            preds_masked, output_masked = resample_free_space(preds_masked, output_masked)
+
         loss = criterion(preds_masked, output_masked)
         loss.backward()
         optimizer.step()
@@ -154,6 +172,9 @@ for epoch in range(epoch_num):
         counter = 0
         num_correct = 0
         num_total = 0
+        all_intersections = np.zeros(num_classes)
+        all_unions = np.zeros(num_classes)
+
         for input_data, output, counts in dataloader_val:
             optimizer.zero_grad()
             input_data = torch.tensor(input_data).to(device)
@@ -180,13 +201,16 @@ for epoch in range(epoch_num):
             outputs_np = output_masked.detach().cpu().numpy()
             num_correct += np.sum(preds_masked == outputs_np)
             num_total += outputs_np.shape[0]
+
+            intersection, union = iou_one_frame(torch.tensor(preds_masked), torch.tensor(output_masked), n_classes=num_classes)
+            all_intersections += intersection
+            all_unions += union
         
         print(f'Eppoch Num: {epoch} ------ average val loss: {running_loss/counter}')
         print(f'Eppoch Num: {epoch} ------ average val accuracy: {num_correct/num_total}')
+        print(f'Eppoch Num: {epoch} ------ val miou: {np.mean(all_intersections / all_unions)}')
         writer.add_scalar(model_name + '/Loss/Val', running_loss/counter, epoch)
         writer.add_scalar(model_name + '/Accuracy/Val', num_correct/num_total, epoch)
+        writer.add_scalar(model_name + '/mIoU/Val', np.mean(all_intersections / all_unions), epoch)
     
 writer.close()
-
-
-
