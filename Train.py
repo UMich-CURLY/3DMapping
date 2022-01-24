@@ -42,20 +42,19 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "SSC_Full"
+model_name = "LMSC"
 num_workers = 16
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Val"
 cylindrical = False
 epoch_num = 500
-remap = False
-resample_free = False # For SSCNet
+remap = True
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 if remap:
-    num_classes = 12
+    num_classes = 11
     frequncies_mapped = np.zeros(num_classes)
     for cls in range(23):
         frequncies_mapped[LABELS_REMAP[cls]] += frequencies_cartesian[cls]
@@ -76,7 +75,12 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
               abs(coor_ranges[5] - coor_ranges[2]) / z_dim] # since BEV
 
 # Load model
+lr = 0.001
+BETA1 = 0.9
+BETA2 = 0.999
 model, B, T, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
+model_name += "_" + str(num_classes)
+print("Running:", model_name)
 
 # Data Loaders
 carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True, remap=remap)

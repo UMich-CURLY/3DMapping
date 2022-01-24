@@ -5,6 +5,11 @@ import torch
 import torch.nn as nn
 import random
 
+from MotionSC import MotionSC
+from SSCNet_full import SSCNet_full
+from LMSCNet_SS import LMSCNet_SS
+from SSCNet import SSCNet
+
 frequencies_cartesian = np.asarray([
     4166593275,
     42309744,
@@ -188,3 +193,37 @@ def visualize_set(model, dataloader, carla_ds, cylindrical, min_thresh=0.75):
                             np.asarray(carla_ds._eval_param['min_bound']), 
                             np.asarray(carla_ds._eval_param['max_bound']),
                             cylindrical=cylindrical, vis=vis, geometry=geometry, min_thresh=min_thresh)
+
+
+def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, device):
+    # Model parameters
+    resample_free = False
+    if model_name == "MotionSC":
+        B = 16
+        T = 16
+        model = MotionSC(voxel_sizes, coor_ranges, grid_dim, T=T, device=device, num_classes=num_classes)
+        decayRate = 0.96
+    elif model_name == "LMSC":
+        B = 4
+        T = 1
+        decayRate = 0.98
+        model = LMSCNet_SS(num_classes, grid_dim, frequencies_cartesian).to(device)
+    elif model_name == "SSC":
+        B = 4
+        T = 1
+        decayRate = 1.00
+        resample_free = True
+        lr = 0.001
+        model = SSCNet(num_classes).to(device)
+    elif model_name == "SSC_Full":
+        B = 4
+        T = 1
+        decayRate = 1.00
+        resample_free = True
+        lr = 0.001
+        model = SSCNet_full(num_classes).to(device)
+    else:
+        print("Please choose either MotionSC, LMSC, or SSC. Thank you.")
+        exit()
+    model.weights_init()
+    return model, B, T, decayRate, resample_free

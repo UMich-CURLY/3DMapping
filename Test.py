@@ -37,23 +37,23 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "LMSC"
+model_name = "SSC"
 num_workers = 24
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Test"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/LMSC/Epoch14.pt"
+MODEL_PATH = "./Models/Weights/SSC_23/Epoch3.pt"
 
 # Which task to perform
-VISUALIZE = False
+VISUALIZE = True
 MEASURE_INFERENCE = False
 MEASURE_MIOU = False
-remap = True
-SAVE_PREDS = True
+remap = False
+SAVE_PREDS = False
 
 if remap:
-    num_classes = 12
+    num_classes = 11
 else:
     num_classes = 23
 
@@ -72,6 +72,8 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
 
 # Load model
 model, B, T, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
+model_name += "_" + str(num_classes)
+print("Running:", model_name)
 
 # Data loaders
 test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
@@ -184,8 +186,6 @@ if SAVE_PREDS:
             # Save data
             preds = preds.detach().cpu().numpy()
             preds.astype('uint32').tofile(fpath)
-
-            break
 
 
 
