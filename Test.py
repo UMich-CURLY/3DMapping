@@ -31,28 +31,26 @@ import psutil
 
 from torch.utils.tensorboard import SummaryWriter
 
-from Models.MotionSC import MotionSC
-from Models.LMSCNet_SS import LMSCNet_SS
-from Models.SSCNet import SSCNet
-
 
 # Put parameters here
 seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "MotionSC"
+model_name = "LMSC"
 num_workers = 24
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Test"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/MotionSC/Epoch3.pt"
+MODEL_PATH = "./Models/Weights/LMSC/Epoch14.pt"
 
+# Which task to perform
 VISUALIZE = False
 MEASURE_INFERENCE = False
-MEASURE_MIOU = True
+MEASURE_MIOU = False
 remap = True
+SAVE_PREDS = True
 
 if remap:
     num_classes = 12
@@ -72,23 +70,8 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
               abs(coor_ranges[4] - coor_ranges[1]) / y_dim,
               abs(coor_ranges[5] - coor_ranges[2]) / z_dim] # since BEV
 
-# Model parameters
-lr = 0.001
-if model_name == "MotionSC":
-    B = 16
-    T = 16
-    model = MotionSC(voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], T=T, device=device)
-    decayRate = 0.96
-elif model_name == "LMSC":
-    B = 4
-    T = 1
-    decayRate = 0.98
-    model = LMSCNet_SS(num_classes, [x_dim, y_dim, z_dim], frequencies_cartesian).to(device)
-elif model_name == "SSC":
-    B = 4
-    T = 1
-    decayRate = 1.00
-    model = SSCNet(num_classes).to(device)
+# Load model
+model, B, T, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
 
 # Data loaders
 test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
@@ -130,7 +113,7 @@ if MODEL_PATH:
     model.eval()
 
 if VISUALIZE:
-    visualize_set(model, dataloader_test, test_ds, cylindrical, min_thresh=0.75)
+    visualize_set(model, dataloader_test, test_ds, cylindrical, min_thresh=0.35)
 
 if MEASURE_INFERENCE:
     total_time = 0.0
@@ -171,11 +154,40 @@ if MEASURE_MIOU:
             preds_masked = preds[mask]
 
             # I, U for a frame
-            intersection, union = iou_one_frame(preds_masked, output_masked, n_classes=23)
+            intersection, union = iou_one_frame(preds_masked, output_masked, n_classes=num_classes)
             all_intersections += intersection
             all_unions += union
 
-            print(all_intersections/all_unions)
+    print(model_name)
+    print(all_intersections/all_unions)
+
+
+if SAVE_PREDS:
+    with torch.no_grad():
+        for idx in range(test_ds.__len__()):
+            # File path
+            point_path = test_ds._velodyne_list[idx]
+            paths = point_path.split("/")
+            save_dir = os.path.join(*paths[:-2], model_name)
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            fpath = os.path.join(save_dir, paths[-1].split(".")[0] + ".label")
+            # Input data
+            current_horizon, output, counts = test_ds.__getitem__(idx)
+            input_data = torch.tensor(current_horizon).to(device)
+            input_data = torch.unsqueeze(input_data, 0)
+            # Label predictions
+            preds = model(input_data)
+            preds = nn.functional.softmax(preds, dim=4)
+            preds = torch.argmax(preds, dim=4)
+            preds = torch.squeeze(preds, dim=0)
+            # Save data
+            preds = preds.detach().cpu().numpy()
+            preds.astype('uint32').tofile(fpath)
+
+            break
+
+
 
 
 

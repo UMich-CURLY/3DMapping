@@ -32,6 +32,7 @@ import psutil
 from torch.utils.tensorboard import SummaryWriter
 
 from Models.MotionSC import MotionSC
+from Models.SSCNet_full import SSCNet_full
 from Models.LMSCNet_SS import LMSCNet_SS
 from Models.SSCNet import SSCNet
 
@@ -41,14 +42,14 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "SSC"
+model_name = "SSC_Full"
 num_workers = 16
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Val"
 cylindrical = False
 epoch_num = 500
-remap = True
-resample_free = False
+remap = False
+resample_free = False # For SSCNet
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -74,31 +75,8 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
               abs(coor_ranges[4] - coor_ranges[1]) / y_dim,
               abs(coor_ranges[5] - coor_ranges[2]) / z_dim] # since BEV
 
-# Model parameters
-lr = 0.001
-BETA1 = 0.9
-BETA2 = 0.999
-if model_name == "MotionSC":
-    B = 16
-    T = 16
-    model = MotionSC(voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], T=T, device=device, num_classes=num_classes)
-    decayRate = 0.96
-elif model_name == "LMSC":
-    B = 4
-    T = 1
-    decayRate = 0.98
-    model = LMSCNet_SS(num_classes, [x_dim, y_dim, z_dim], frequencies_cartesian).to(device)
-elif model_name == "SSC":
-    B = 4
-    T = 1
-    decayRate = 1.00
-    resample_free = True
-    lr = 0.001
-    model = SSCNet(num_classes).to(device)
-else:
-    print("Please choose either MotionSC, LMSC, or SSC. Thank you.")
-    exit()
-model.weights_init()
+# Load model
+model, B, T, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
 
 # Data Loaders
 carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True, remap=remap)

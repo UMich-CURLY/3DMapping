@@ -124,7 +124,6 @@ class CarlaDataset(Dataset):
         self._poses = np.array(self._poses).reshape(sum(self._num_frames_scene), 12)
         
         self._cum_num_frames = np.cumsum(np.array(self._num_frames_scene) - self._num_frames + 1)
-        
 
     # Use all frames, if there is no data then zero pad
     def __len__(self):
@@ -154,6 +153,9 @@ class CarlaDataset(Dataset):
             unique_voxels = unique_voxels.astype(np.int)
             voxel_grid[t_i, unique_voxels[:, 0], unique_voxels[:, 1], unique_voxels[:, 2]] += counts
         return voxel_grid
+
+    def get_file_path(self, idx):
+        print(self._frames_list[idx])
 
     def __getitem__(self, idx):
         # -1 indicates no data
