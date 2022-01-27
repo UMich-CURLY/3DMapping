@@ -29,7 +29,7 @@ import pdb
 from PIL import Image
 import psutil
 
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
 
 # Put parameters here
@@ -37,20 +37,20 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "SSC"
-num_workers = 24
-train_dir = "./Data/Scenes/Cartesian/Train"
-val_dir = "./Data/Scenes/Cartesian/Test"
+model_name = "MotionSC"
+num_workers = 8
+train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
+val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/SSC_23/Epoch3.pt"
+MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
 
 # Which task to perform
-VISUALIZE = True
+VISUALIZE = False
 MEASURE_INFERENCE = False
 MEASURE_MIOU = False
-remap = False
-SAVE_PREDS = False
+remap = True
+SAVE_PREDS = True
 
 if remap:
     num_classes = 11
@@ -80,7 +80,7 @@ test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindric
 dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
 
 
-writer = SummaryWriter("./Models/Runs/" + model_name)
+# writer = SummaryWriter("./Models/Runs/" + model_name)
 save_dir = "./Models/Weights/" + model_name
 
 if device == "cuda":
@@ -171,9 +171,11 @@ if SAVE_PREDS:
             point_path = test_ds._velodyne_list[idx]
             paths = point_path.split("/")
             save_dir = os.path.join(*paths[:-2], model_name)
+   
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             fpath = os.path.join(save_dir, paths[-1].split(".")[0] + ".label")
+
             # Input data
             current_horizon, output, counts = test_ds.__getitem__(idx)
             input_data = torch.tensor(current_horizon).to(device)
