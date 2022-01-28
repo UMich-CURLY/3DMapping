@@ -37,13 +37,13 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "MotionSC"
+model_name = "SSC_Full" #MotionSC LMSC
 num_workers = 8
 train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
-val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
+val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test/"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
+MODEL_PATH = "./Models/Weights/SSC_Full_11/Epoch47.pt"
 
 # Which task to perform
 VISUALIZE = False
@@ -171,10 +171,10 @@ if SAVE_PREDS:
             point_path = test_ds._velodyne_list[idx]
             paths = point_path.split("/")
             save_dir = os.path.join(*paths[:-2], model_name)
-   
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             fpath = os.path.join(save_dir, paths[-1].split(".")[0] + ".label")
+            print("saving:", fpath)
 
             # Input data
             current_horizon, output, counts = test_ds.__getitem__(idx)

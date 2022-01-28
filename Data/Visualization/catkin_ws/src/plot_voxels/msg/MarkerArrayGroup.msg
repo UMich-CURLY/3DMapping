@@ -1,0 +1,3 @@
+visualization_msgs/MarkerArray marker_array_1
+visualization_msgs/MarkerArray marker_array_2
+visualization_msgs/MarkerArray marker_array_2
