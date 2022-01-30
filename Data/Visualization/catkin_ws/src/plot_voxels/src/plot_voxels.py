@@ -60,17 +60,19 @@ colors = np.array([
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
 
 def talker():
-    model_names = ['MotionSC', 'LMSC', 'SSC_Full']
+    model_names = ['MotionSC', 'LMSC', 'SSC_Full', 'JS3C']
     model_offsets = [
         [-35, 35.0, 0.0],
         [-35, -35.0, 0.0],
-        [35, 35.0, 0.0 ]
+        [35, 35.0, 0.0 ],
+        [35.0, -35.0, 0.0]
     ]
     pub_MotionSC = rospy.Publisher('MotionSC_mapper', MarkerArray, queue_size=None)
     pub_LMSC = rospy.Publisher('LMSC_mapper', MarkerArray, queue_size=None)
     pub_SSC = rospy.Publisher('SSC_Full_mapper', MarkerArray, queue_size=None)
+    pub_JS3C= rospy.Publisher('JS3C_mapper', MarkerArray, queue_size=None)
 
-    pub = [pub_MotionSC, pub_LMSC, pub_SSC]
+    pub = [pub_MotionSC, pub_LMSC, pub_SSC, pub_JS3C]
     pub2 = rospy.Publisher('BEV', Image, queue_size=None)
     rospy.init_node('talker',disable_signals=True)
     rate = rospy.Rate(1)
@@ -81,14 +83,16 @@ def talker():
         MotionSC_markers = MarkerArray()
         LMSC_markers = MarkerArray()
         SSC_markers = MarkerArray()
-        markers = [MotionSC_markers, LMSC_markers, SSC_markers]
+        JS3C_markers = MarkerArray()
+        markers = [MotionSC_markers, LMSC_markers, SSC_markers, JS3C_markers]
 
         data_dir = "../../Scenes/Cartesian/Test_Cartesian/Test/Town10_Heavy/cartesian"
 
         load_dir_MotionSC = os.path.join(data_dir, "MotionSC_11")
         load_dir_LMSC = os.path.join(data_dir, "LMSC_11")
         load_dir_SSC = os.path.join(data_dir, "SSC_Full_11")
-        load_dirs = [load_dir_MotionSC, load_dir_LMSC, load_dir_SSC]
+        load_dir_JS3C = os.path.join(data_dir, "JS3CNet_11")
+        load_dirs = [load_dir_MotionSC, load_dir_LMSC, load_dir_SSC, load_dir_JS3C]
         #print("load_dirs:",len(load_dirs))
 
         load_bev = os.path.join(data_dir, "bev")
