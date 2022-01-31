@@ -37,13 +37,13 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "SSC_Full" #MotionSC LMSC
+model_name = "MotionSC" #MotionSC LMSC
 num_workers = 8
 train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
 val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test/"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/SSC_Full_11/Epoch47.pt"
+MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
 
 # Which task to perform
 VISUALIZE = False
