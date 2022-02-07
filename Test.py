@@ -29,7 +29,9 @@ import pdb
 from PIL import Image
 import psutil
 
-# from torch.utils.tensorboard import SummaryWriter
+from ptflops import get_model_complexity_info
+
+from torch.utils.tensorboard import SummaryWriter
 
 
 # Put parameters here
@@ -37,20 +39,22 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "SSC_Full" #MotionSC LMSC
-num_workers = 8
-train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
-val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test/"
+model_name = "LMSC"
+num_workers = 16
+train_dir = "./Data/Scenes/Cartesian/Train"
+val_dir = "./Data/Scenes/Cartesian/Test"
 cylindrical = False
-epoch_num = 500
-MODEL_PATH = "./Models/Weights/SSC_Full_11/Epoch47.pt"
+MODEL_PATH = "./Models/Weights/LMSC_11/Epoch4.pt"
+remap = True
 
 # Which task to perform
 VISUALIZE = False
 MEASURE_INFERENCE = False
 MEASURE_MIOU = False
-remap = True
-SAVE_PREDS = True
+MEASURE_ACCURACY = False
+SAVE_PREDS = False
+MEASURE_GEOMETRY = False
+MEASURE_SIZE = True
 
 if remap:
     num_classes = 11
@@ -76,11 +80,11 @@ model_name += "_" + str(num_classes)
 print("Running:", model_name)
 
 # Data loaders
-test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical)
+test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
 dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
 
 
-# writer = SummaryWriter("./Models/Runs/" + model_name)
+writer = SummaryWriter("./Models/Runs/" + model_name)
 save_dir = "./Models/Weights/" + model_name
 
 if device == "cuda":
@@ -97,17 +101,22 @@ setup_seed(seed)
 
 # Intersection, union for one frame
 def iou_one_frame(pred, target, n_classes=23):
-    pred = pred.view(-1)
-    target = target.view(-1)
+    pred = pred.view(-1).detach().cpu().numpy()
+    target = target.view(-1).detach().cpu().numpy()
     intersection = np.zeros(n_classes)
     union = np.zeros(n_classes)
 
     for cls in range(n_classes):
-        pred_inds = pred == cls
-        target_inds = target == cls
-        intersection[cls] = (pred_inds[target_inds]).long().sum().item()  # Cast to long to prevent overflows
-        union[cls] = pred_inds.long().sum().item() + target_inds.long().sum().item() - intersection[cls]
+        intersection[cls] = np.sum((pred == cls) & (target == cls))
+        union[cls] = np.sum((pred == cls) | (target == cls))
     return intersection, union
+
+
+def count_parameters(model, T):
+    macs, params = get_model_complexity_info(model, (T, 128, 128, 8), as_strings=True,
+                                             print_per_layer_stat=True, verbose=True)
+    model_size = sum(p.numel() for p in model.parameters())
+    print(model_size)
 
 
 if MODEL_PATH:
@@ -115,7 +124,10 @@ if MODEL_PATH:
     model.eval()
 
 if VISUALIZE:
-    visualize_set(model, dataloader_test, test_ds, cylindrical, min_thresh=0.35)
+    visualize_set(model, dataloader_test, test_ds, cylindrical, min_thresh=0.75)
+
+if MEASURE_SIZE:
+    count_parameters(model, T)
 
 if MEASURE_INFERENCE:
     total_time = 0.0
@@ -136,7 +148,39 @@ if MEASURE_INFERENCE:
 
 if MEASURE_MIOU:
     all_intersections = np.zeros(num_classes)
-    all_unions = np.zeros(num_classes)
+    all_unions = np.zeros(num_classes) + 1e-6
+    with torch.no_grad():
+        for input_data, output, counts in dataloader_test:
+            input_data = torch.tensor(input_data).to(device)
+            output = torch.tensor(output).to(device)
+            counts = torch.tensor(counts).to(device)
+
+            # Predictions
+            preds = model(input_data)
+            counts = counts.view(-1)
+            output = output.view(-1).long()
+            preds = preds.contiguous().view(-1, preds.shape[4])
+            probs = nn.functional.softmax(preds, dim=1)
+            preds = torch.argmax(probs, dim=1)
+
+            # Criterion requires input (NxC), output (N) dimension
+            mask = counts > 0
+            output_masked = output[mask]
+            preds_masked = preds[mask]
+
+            # I, U for a frame
+            intersection, union = iou_one_frame(preds_masked, output_masked, n_classes=num_classes)
+            all_intersections += intersection
+            all_unions += union
+
+    print(model_name)
+    iou = all_intersections/all_unions
+    for i in range(num_classes):
+        print(100 * iou[i])
+
+if MEASURE_ACCURACY:
+    num_correct = 0.0
+    num_total = 0.0
     with torch.no_grad():
         for input_data, output, counts in dataloader_test:
             input_data = torch.tensor(input_data).to(device)
@@ -156,12 +200,46 @@ if MEASURE_MIOU:
             preds_masked = preds[mask]
 
             # I, U for a frame
-            intersection, union = iou_one_frame(preds_masked, output_masked, n_classes=num_classes)
-            all_intersections += intersection
-            all_unions += union
+            num_correct += np.sum(output_masked.cpu().numpy() == preds_masked.cpu().numpy())
+            num_total += preds_masked.shape[0]
+
+    print(model_name, num_correct/num_total)
+
+
+if MEASURE_GEOMETRY:
+    TP = 0.0
+    FP = 0.0
+    TN = 0.0
+    FN = 0.0
+    with torch.no_grad():
+        for input_data, output, counts in dataloader_test:
+            input_data = torch.tensor(input_data).to(device)
+            output = torch.tensor(output).to(device)
+            counts = torch.tensor(counts).to(device)
+
+            # Predictions
+            preds = model(input_data)
+            counts = counts.view(-1)
+            output = output.view(-1).long()
+            preds = preds.contiguous().view(-1, preds.shape[4])
+            probs = nn.functional.softmax(preds, dim=1)
+            preds = torch.argmax(probs, dim=1)
+            # Criterion requires input (NxC), output (N) dimension
+            mask = counts > 0
+            output_masked = output[mask].cpu().numpy()
+            output_masked[output_masked != 0] = 1
+            preds_masked = preds[mask].cpu().numpy()
+            preds_masked[preds_masked != 0] = 1
+
+            TP += np.sum((preds_masked == 1) & (output_masked == 1))
+            FP += np.sum((preds_masked == 1) & (output_masked == 0))
+            TN += np.sum((preds_masked == 0) & (output_masked == 0))
+            FN += np.sum((preds_masked == 0) & (output_masked == 1))
 
     print(model_name)
-    print(all_intersections/all_unions)
+    print("precision:", 100 * TP / (TP + FP))
+    print("recall:", 100 * TP / (TP + FN))
+    print("iou:", 100 * TP / (TP + FP + FN))
 
 
 if SAVE_PREDS:
@@ -174,8 +252,6 @@ if SAVE_PREDS:
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             fpath = os.path.join(save_dir, paths[-1].split(".")[0] + ".label")
-            print("saving:", fpath)
-
             # Input data
             current_horizon, output, counts = test_ds.__getitem__(idx)
             input_data = torch.tensor(current_horizon).to(device)

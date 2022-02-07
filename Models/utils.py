@@ -43,7 +43,7 @@ LABEL_COLORS = np.array([
     (55, 90, 80),    # Other
     (255, 255, 0),   # Pedestrian
     (153, 153, 153), # Pole
-    (157, 234, 50),  # RoadLines
+    (0, 0, 255),  # RoadLines
     (0, 0, 255),  # Road
     (255, 255, 255),  # Sidewalk
     (0, 155, 0),  # Vegetation
@@ -223,7 +223,7 @@ def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, devic
         lr = 0.001
         model = SSCNet_full(num_classes).to(device)
     else:
-        print("Please choose either MotionSC, LMSC, or SSC. Thank you.")
+        print("Please choose either MotionSC, LMSC, or SSC / SSC_Full. Thank you.")
         exit()
     model.weights_init()
     return model, B, T, decayRate, resample_free
