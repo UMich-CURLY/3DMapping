@@ -30,3 +30,4 @@ LABEL_COLORS = np.array([
     (45, 60, 150),   # Water 21
     (145, 170, 100), # Terrain 22
 ]) / 255.0 # normalize each channel [0-1] since is what Open3D uses
+    

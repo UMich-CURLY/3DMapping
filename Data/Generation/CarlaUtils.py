@@ -60,7 +60,7 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
     points = np.array([data['x'], data['y'], data['z']]).T
     points = points[non_ego, :]
 
-    # Add noise (0.2 centimeters)
+    # Add noise (2 centimeters)
     points += np.random.uniform(-0.02, 0.02, size=points.shape)
 
     # Unique tags
