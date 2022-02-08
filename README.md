@@ -1,6 +1,8 @@
 # 3DMapping
 Learning to map in 3D
 
+![ModelComparison](https://user-images.githubusercontent.com/21368455/153002365-be18e82c-94d2-481f-a35b-08db12ac62c9.gif)
+
 ## Log
 
 ***Nov 17, 2021*** 
