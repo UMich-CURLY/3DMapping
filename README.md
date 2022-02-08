@@ -9,7 +9,7 @@ Our data set is a novel data set with accurate, complete dynamic outdoor scenes 
 </p>
 
 ## Networks: **MotionSC**
-We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC uses temporal information to perform semantic scene completion in real-time, useful as a 3D local semantic map. We compare with baselines LMSCNet (3), JS3CNet (4), and SSCNet (6). A video comparison is shown below. Note that in the video, the ego vehicle is the stationary Tesla in the bottom right, and is excluded from the complete semantic scenes. 
+We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC uses temporal information to perform semantic scene completion in real-time, useful as a 3D local semantic map. We compare with baselines LMSCNet (3), JS3CNet (5), and SSCNet (6). A video comparison is shown below. Note that in the video, the ego vehicle is the stationary Tesla in the bottom right, and is excluded from the complete semantic scenes. 
 
 <p align="center">
   <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
