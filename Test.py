@@ -39,13 +39,14 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-model_name = "LMSC"
-num_workers = 16
-train_dir = "./Data/Scenes/Cartesian/Train"
-val_dir = "./Data/Scenes/Cartesian/Test"
+
+model_name = "MotionSC" #MotionSC LMSC
+num_workers = 8
+train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
+val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test/"
 cylindrical = False
-MODEL_PATH = "./Models/Weights/LMSC_11/Epoch4.pt"
-remap = True
+epoch_num = 500
+MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
 
 # Which task to perform
 VISUALIZE = False
