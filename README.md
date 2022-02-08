@@ -1,5 +1,5 @@
 # 3D Mapping
-Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Software documentation may be found in the wiki, and more information may be found on our [website](https://umich-curly.github.io/CarlaSC.github.io/). Below is an overview of our project.
+Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Software documentation may be found in the wiki, and more information may be found on our [website](https://umich-curly.github.io/CarlaSC.github.io/). Below is an overview of our project. For more information on the data and method, see our website. For more information on the software and files involved, see the Wiki.
 
 ## Data: **CarlaSC**
 Our data set is a novel data set with accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
@@ -9,6 +9,8 @@ Our data set is a novel data set with accurate, complete dynamic outdoor scenes 
 </p>
 
 ## Networks: **MotionSC**
+We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC uses temporal information to perform semantic scene completion in real-time, useful as a 3D local semantic map. We compare with baselines LMSCNet (3), JS3CNet (4), and SSCNet (6). A video comparison is shown below. 
+
 <p align="center">
   <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
 </p>
@@ -27,4 +29,5 @@ We utilize data and code from:
 - [3] LMSCNet https://arxiv.org/abs/2008.10559
 - [4] Semantic KITTI https://arxiv.org/abs/1904.01416
 - [5] JS3CNet https://arxiv.org/abs/2012.03762
+- [6] SSCNet http://sscnet.cs.princeton.edu/
 
