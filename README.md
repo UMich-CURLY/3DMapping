@@ -11,13 +11,6 @@ Learning to map in 3D
   <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
 </p>
 
-## Log
-
-***Nov 17, 2021*** 
-
-* Added python class for cylindrical cells based on Cylinder3D implementation.
-* Added Carla dataloader python script, currently generates 1000 red dummy data points using `load_dummy_point_cloud()` and plots blue points for cylindrical cell centroids that have data points associated to them.
-
 ## Use 3DMapping
 ### Dependencies
 * [Pytorch](https://pytorch.org/get-started/locally/) - we tested on PyTorch 1.10 and 1.8.2
