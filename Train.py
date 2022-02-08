@@ -48,7 +48,7 @@ train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Val"
 cylindrical = False
 epoch_num = 500
-remap = True
+remap = False
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -155,7 +155,7 @@ for epoch in range(epoch_num):
         num_correct = 0
         num_total = 0
         all_intersections = np.zeros(num_classes)
-        all_unions = np.zeros(num_classes)
+        all_unions = np.zeros(num_classes) + 1e-6 # SMOOTHING
 
         for input_data, output, counts in dataloader_val:
             optimizer.zero_grad()
