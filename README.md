@@ -1,34 +1,30 @@
-# 3DMapping
-Learning to map in 3D
+# 3D Mapping
+Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Software documentation may be found in the wiki, and more information may be found on our [website](https://umich-curly.github.io/CarlaSC.github.io/). Below is an overview of our project.
 
-## **CarlaSC**
-<img width="1111" alt="DataComparison" src="https://user-images.githubusercontent.com/21368455/153003213-03659261-45c5-46f5-8177-b5482e7c0604.png">
+## Data: **CarlaSC**
+Our data set is a novel data set with accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
 
+<p align="center">
+  <img width="740" src="https://user-images.githubusercontent.com/21368455/153008032-d1332e4a-4872-4348-99ec-9fb64106e849.png">
+</p>
 
-
-## **MotionSC**
-
-![ModelComparison](https://user-images.githubusercontent.com/21368455/153002365-be18e82c-94d2-481f-a35b-08db12ac62c9.gif)
-
-## Log
-
-***Nov 17, 2021*** 
-
-* Added python class for cylindrical cells based on Cylinder3D implementation.
-* Added Carla dataloader python script, currently generates 1000 red dummy data points using `load_dummy_point_cloud()` and plots blue points for cylindrical cell centroids that have data points associated to them.
+## Networks: **MotionSC**
+<p align="center">
+  <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
+</p>
 
 ## Use 3DMapping
 ### Dependencies
 * [Pytorch](https://pytorch.org/get-started/locally/) - we tested on PyTorch 1.10 and 1.8.2
-* [SpConv](https://github.com/traveller59/spconv) - we recommend using `spconv-cu113` and we found this is an issue with using `spconv-cu102` and cpu version.
+* [SpConv](https://github.com/traveller59/spconv) - for running JS3CNet. We recommend using `spconv-cu113` and we found this is an issue with using `spconv-cu102` and cpu version.
 * [Open3D](http://www.open3d.org/) - for visualizing map
-### Get Started
-### ToDo List
-- [x] Run the model with dummy data
-- [ ] Gather real data from simulator and start first training
 
 
 ## Acknowledgement
 We utilize data and code from: 
-- CARLA Simulator https://carla.org/ 
-- MotionNet https://arxiv.org/abs/2003.06754 
+- [1] CARLA Simulator https://carla.org/ 
+- [2] MotionNet https://arxiv.org/abs/2003.06754 
+- [3] LMSCNet https://arxiv.org/abs/2008.10559
+- [4] Semantic KITTI https://arxiv.org/abs/1904.01416
+- [5] JS3CNet https://arxiv.org/abs/2012.03762
+
