@@ -4,10 +4,10 @@ Learning to map in 3D
 ## **CarlaSC**
 <img width="1111" alt="DataComparison" src="https://user-images.githubusercontent.com/21368455/153003213-03659261-45c5-46f5-8177-b5482e7c0604.png">
 
-
-
 ## **MotionSC**
-
+<p align="center">
+  <img width="460" height="300" src="https://user-images.githubusercontent.com/21368455/153002365-be18e82c-94d2-481f-a35b-08db12ac62c9.gif">
+</p>
 ![ModelComparison](https://user-images.githubusercontent.com/21368455/153002365-be18e82c-94d2-481f-a35b-08db12ac62c9.gif)
 
 ## Log
