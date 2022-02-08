@@ -2,8 +2,10 @@
 Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Software documentation may be found in the wiki, and more information may be found on our website. Below is an overview of our project.
 
 ## Data: **CarlaSC**
+Our data set is the first to create accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
+
 <p align="center">
-  <img width="740" src="https://user-images.githubusercontent.com/21368455/153003213-03659261-45c5-46f5-8177-b5482e7c0604.png">
+  <img width="740" src="https://user-images.githubusercontent.com/21368455/153008032-d1332e4a-4872-4348-99ec-9fb64106e849.png">
 </p>
 
 ## Networks: **MotionSC**
@@ -20,7 +22,9 @@ Welcome! This repository contains all software used to create CarlaSC (our dynam
 
 ## Acknowledgement
 We utilize data and code from: 
-- CARLA Simulator https://carla.org/ 
-- MotionNet https://arxiv.org/abs/2003.06754 
-- LMSCNet https://arxiv.org/abs/2008.10559
-- JS3CNet https://arxiv.org/abs/2012.03762
+- [1] CARLA Simulator https://carla.org/ 
+- [2] MotionNet https://arxiv.org/abs/2003.06754 
+- [3] LMSCNet https://arxiv.org/abs/2008.10559
+- [4] Semantic KITTI https://arxiv.org/abs/1904.01416
+- [5] JS3CNet https://arxiv.org/abs/2012.03762
+
