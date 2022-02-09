@@ -2,7 +2,7 @@
 Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Below is an overview of our project. For more information on the data and method, see our [website](https://umich-curly.github.io/CarlaSC.github.io/). For more information on the software and files involved, see the [Wiki](https://github.com/UMich-CURLY/3DMapping/wiki).
 
 ## Data: **CarlaSC**
-Our data set is a novel data set with accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
+A novel data set with accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
 
 <p align="center">
   <img width="740" src="https://user-images.githubusercontent.com/21368455/153008032-d1332e4a-4872-4348-99ec-9fb64106e849.png">
