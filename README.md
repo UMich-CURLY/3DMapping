@@ -1,6 +1,13 @@
 # 3D Mapping
 Welcome! This repository contains all software used to create CarlaSC (our dynamic scene completion data set) and MotionSC (our local semantic mapping network), and all baselines. Below is an overview of our project. For more information on the data and method, see our [website](https://umich-curly.github.io/CarlaSC.github.io/). For more information on the software and files involved, see the [Wiki](https://github.com/UMich-CURLY/3DMapping/wiki).
 
+## Table of Contents
+ - [Data](#data-carlasc)
+ - [Networks](#networks-motionsc)
+ - [Use 3DMapping](#use-3dmapping)
+   - [Dependencies](#dependencies)
+ - [Acknowledgement](#acknowledgement)
+
 ## Data: **CarlaSC**
 A novel data set with accurate, complete dynamic outdoor scenes for semantic scene completion or mapping. We use the CARLA simulator (1) to gather clean ground truth information, where we randomly place a large number of sensors in each scene, guaranteeing theoretical convergence to the true scene and network generalization to the full scene. Dynamic maps are difficult due to traces left behind by moving objects, and occlusions. Below is a comparison of a frame from our data set with a similar frame from Semantic KITTI (4). 
 
@@ -18,8 +25,8 @@ We create a network using ideas from MotionNet (2) and LMSCNet (3), which we cal
 ## Use 3DMapping
 ### Dependencies
 * [Pytorch](https://pytorch.org/get-started/locally/) - we tested on PyTorch 1.10 and 1.8.2
-* [SpConv](https://github.com/traveller59/spconv) - for running JS3CNet. We recommend using `spconv-cu113` and we found this is an issue with using `spconv-cu102` and cpu version.
 * [Open3D](http://www.open3d.org/) - for visualizing map
+* [Spconv](https://github.com/traveller59/spconv) - Only required by JS3CNet. The JS3CNet is a little complicated on its dependency, please check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it.
 
 
 ## Acknowledgement
