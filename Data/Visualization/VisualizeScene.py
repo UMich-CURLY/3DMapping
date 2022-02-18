@@ -95,6 +95,8 @@ def gen_points(counts, labels, min_dim, max_dim, num_samples, vis, cylindrical=T
 # test code
 def main():
     vis = o3d.visualization.Visualizer()
+
+    # TODO: you may change these parameters if needed
     parent_dir = "../Scenes/Town03_Heavy/"
     cylindrical = False
     num_samples = 100  # samples per cell

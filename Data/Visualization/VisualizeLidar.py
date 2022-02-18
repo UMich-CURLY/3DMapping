@@ -60,6 +60,8 @@ def gen_points(load_dir, sensor, frame, vis):
 
 def main():
     vis = o3d.visualization.Visualizer()
+
+    # TODO: you may change these parameters if needed
     try: 
         load_dir = "../Scenes/Town01_Heavy/raw/"
         sensors = [i for i in range(20)]

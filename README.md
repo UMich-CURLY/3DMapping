@@ -28,8 +28,13 @@ We create a network using ideas from MotionNet (2) and LMSCNet (3), which we cal
 * [Pytorch](https://pytorch.org/get-started/locally/) - we tested on PyTorch 1.10 and 1.8.2
 * [Open3D](http://www.open3d.org/) - for visualizing map
 * [Spconv](https://github.com/traveller59/spconv) - Only required by JS3CNet. The JS3CNet is a little complicated on its dependency, please check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it.
+* For data generation and visualization tasks, you can find the dependencies at [Wiki Home](https://github.com/UMich-CURLY/3DMapping/wiki) and [Data Visualization](https://github.com/UMich-CURLY/3DMapping/wiki/Data-Visualization).
+
+### Data Generation and Visualization
+We provide script to generate the dataset. We also provide scripts for visualizing the data. We have detailed explanation on the useful scripts and parameters in our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). You can check the `TODO` block in scripts for parameters that could be adjusted.
+
 ### Training and Testing
-We provide synthetic scripts of training and testing MotionSC, LMSCNet and SSCNet in our repo. You can find how to use them on our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). Due to special dependencies of JS3CNet, you can check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it.
+We provide synthetic scripts of training and testing MotionSC, LMSCNet and SSCNet in our repo. You can check the `TODO` block in scripts for parameters that could be adjusted. You can find how to use them on our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). Due to special dependencies of JS3CNet, you can check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it. 
 
 ## Acknowledgement
 We utilize data and code from: 

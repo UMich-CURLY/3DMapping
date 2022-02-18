@@ -148,6 +148,7 @@ def main(arg):
 
 
 if __name__ == "__main__":
+    # TODO: you may change these parameters if needed
     args = {
         "host": "localhost",
         "port": 2000,

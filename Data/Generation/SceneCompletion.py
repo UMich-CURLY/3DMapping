@@ -302,7 +302,8 @@ def main():
                 transformed_points = np.matmul(temp_points, inv_transforms[sensor][:3, :3]) # Convert points to ego frame
                 transformed_points = transformed_points + inv_transforms[sensor][:3, 3]
                 voxel_grid = add_points(transformed_points, temp_labels, voxel_grid)
-                    
+        
+        # TODO: you may change these parameters if needed
         # Save volume - counts per cell, and argmax per cell
         voxels = voxel_grid.get_voxels()
         labels = np.argmax(voxels, axis=3)

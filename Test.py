@@ -33,13 +33,14 @@ from ptflops import get_model_complexity_info
 
 from torch.utils.tensorboard import SummaryWriter
 
-
+# TODO: you may change these parameters if needed
 # Put parameters here
 seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
 
+# TODO: you may change these parameters if needed
 model_name = "MotionSC" #MotionSC LMSC
 num_workers = 8
 train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
@@ -48,6 +49,7 @@ cylindrical = False
 epoch_num = 500
 MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
 
+# TODO: you may change these parameters if needed
 # Which task to perform
 VISUALIZE = False
 MEASURE_INFERENCE = False

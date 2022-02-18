@@ -36,7 +36,7 @@ from Models.SSCNet_full import SSCNet_full
 from Models.LMSCNet_SS import LMSCNet_SS
 from Models.SSCNet import SSCNet
 
-
+# TODO: you may change these parameters if needed
 # PARAMETERS
 seed = 42
 x_dim = 128
@@ -50,6 +50,7 @@ cylindrical = False
 epoch_num = 500
 remap = False
 
+# TODO: you may change these parameters if needed
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -62,11 +63,13 @@ if remap:
 else:
     num_classes = 23
 
+# TODO: you may change these parameters if needed
 # Weights
 epsilon_w = 0.001  # eps to avoid zero division
 weights = torch.from_numpy(1 / np.log(frequencies_cartesian + epsilon_w)).to(torch.float32)
 criterion = nn.CrossEntropyLoss(weight=weights.to(device))
 
+# TODO: you may change these parameters if needed
 # Grid Parameters
 carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=1, cylindrical=cylindrical)
 coor_ranges = carla_ds._eval_param['min_bound'] + carla_ds._eval_param['max_bound']
@@ -74,6 +77,7 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
               abs(coor_ranges[4] - coor_ranges[1]) / y_dim,
               abs(coor_ranges[5] - coor_ranges[2]) / z_dim] # since BEV
 
+# TODO: you may change these parameters if needed
 # Load model
 lr = 0.001
 BETA1 = 0.9
