@@ -76,9 +76,9 @@ def semantic_lidar_callback(point_cloud, world, lidar_id, vehicle_id, save_dir, 
         actor_vel = np.asarray([actor_vel.x, actor_vel.y, actor_vel.z])
 
         # # Transform to lidar (Just the rotation)
-        to_world = np.array(actor.get_transform().get_matrix())[:3, :3]
+        # to_world = np.array(actor.get_transform().get_matrix())[:3, :3]
         to_ego = np.array(lidar_loc.get_inverse_matrix())[:3, :3]
-        to_ego = np.matmul(to_ego, to_world)
+        # to_ego = np.matmul(to_ego, to_world)
         rel_vel = np.matmul(to_ego, actor_vel)
 
         # For checking whether velocities are correct in lidar frame
