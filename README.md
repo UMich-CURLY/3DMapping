@@ -46,5 +46,23 @@ We utilize data and code from:
 - [6] SSCNet http://sscnet.cs.princeton.edu/
 
 ## Reference
-If you find our work useful in your research work, consider citing [our paper](paper_link)!
-<!-- TODO! Paper bibtext -->
+If you find our work useful in your research work, consider citing [our paper](https://arxiv.org/abs/2203.07060)!
+```
+@misc{https://doi.org/10.48550/arxiv.2203.07060,
+  doi = {10.48550/ARXIV.2203.07060},
+  
+  url = {https://arxiv.org/abs/2203.07060},
+  
+  author = {Wilson, Joey and Song, Jingyu and Fu, Yuewei and Zhang, Arthur and Capodieci, Andrew and Jayakumar, Paramsothy and Barton, Kira and Ghaffari, Maani},
+  
+  keywords = {Computer Vision and Pattern Recognition (cs.CV), Robotics (cs.RO), FOS: Computer and information sciences, FOS: Computer and information sciences},
+  
+  title = {MotionSC: Data Set and Network for Real-Time Semantic Mapping in Dynamic Environments},
+  
+  publisher = {arXiv},
+  
+  year = {2022},
+  
+  copyright = {Creative Commons Attribution 4.0 International}
+}
+```
