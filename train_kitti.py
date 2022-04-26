@@ -112,9 +112,9 @@ for epoch in range(epoch_num):
     model.train()
     for input_data, output, counts in dataloader:
         optimizer.zero_grad()
-        input_data = torch.tensor(input_data).to(device)
-        output = torch.tensor(output).to(device)
-        counts = torch.tensor(counts).to(device)
+        input_data = torch.from_numpy(np.array(input_data)).to(device)
+        output = torch.from_numpy(np.array(output)).to(device)
+        counts = torch.from_numpy(np.array(counts)).to(device)
         preds = model(input_data)
          
         counts = counts.view(-1)
@@ -161,9 +161,9 @@ for epoch in range(epoch_num):
 
         for input_data, output, counts in dataloader_val:
             optimizer.zero_grad()
-            input_data = torch.tensor(input_data).to(device)
-            output = torch.tensor(output).to(device)
-            counts = torch.tensor(counts).to(device)
+            input_data = torch.from_numpy(np.array(input_data)).to(device)
+            output = torch.from_numpy(np.array(output)).to(device)
+            counts = torch.from_numpy(np.array(counts)).to(device)
             preds = model(input_data)
 
             counts = counts.view(-1)
@@ -181,12 +181,19 @@ for epoch in range(epoch_num):
 
             # Accuracy
             probs = nn.functional.softmax(preds_masked, dim=1)
-            preds_masked = np.argmax(probs.detach().cpu().numpy(), axis=1)
-            outputs_np = output_masked.detach().cpu().numpy()
-            num_correct += np.sum(preds_masked == outputs_np)
-            num_total += outputs_np.shape[0]
+            
+            # preds_masked = np.argmax(probs.detach().cpu().numpy(), axis=1)
+            # outputs_np = output_masked.detach().cpu().numpy()
+            # num_correct += np.sum(preds_masked == outputs_np)
+            # num_total += outputs_np.shape[0]
 
-            intersection, union = iou_one_frame(torch.tensor(preds_masked), torch.tensor(output_masked), n_classes=num_classes)
+            # Optimzied validation speed
+            preds_masked = torch.argmax(probs.detach(), dim=1)
+            num_correct += torch.sum(preds_masked == output_masked)
+            num_total += output_masked.shape[0]
+
+            # intersection, union = iou_one_frame(torch.tensor(preds_masked), torch.tensor(output_masked), n_classes=num_classes)
+            intersection, union = iou_one_frame(preds_masked, output_masked, n_classes=num_classes)
             all_intersections += intersection
             all_unions += union
         
