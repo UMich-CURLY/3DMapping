@@ -195,12 +195,12 @@ def visualize_set(model, dataloader, carla_ds, cylindrical, min_thresh=0.75):
                             cylindrical=cylindrical, vis=vis, geometry=geometry, min_thresh=min_thresh)
 
 
-def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, device):
+def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, device, T=16):
     # Model parameters
     resample_free = False
     if model_name == "MotionSC":
         B = 16
-        T = 16
+        T = T
         model = MotionSC(voxel_sizes, coor_ranges, grid_dim, T=T, device=device, num_classes=num_classes)
         decayRate = 0.96
     elif model_name == "LMSC":

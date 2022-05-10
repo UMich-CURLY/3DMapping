@@ -16,7 +16,7 @@ class MotionSC(nn.Module):
         self.coor_ranges = coor_ranges
         self.grid_dims = grid_dims
         self.segmentation_head = SegmentationHead(1, 8, num_classes, [1, 2, 3]).to(device)
-        self.stpn = STPN(height_feat_size=self.grid_dims[2], cell_feat_size=grid_dims[2]).to(device)
+        self.stpn = STPN(height_feat_size=self.grid_dims[2], cell_feat_size=grid_dims[2], T=T).to(device)
         self.binary = binary
 
     def forward(self, x_in):
