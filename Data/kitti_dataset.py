@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 from torch.utils.data import Dataset
 import torch
-import spconv
+# import spconv
 import math
 
 config_file = os.path.join('Data/semantic-kitti.yaml')
@@ -13,6 +13,7 @@ remapdict = kitti_config["learning_map"]
 # print(kitti_config['content'])
 # print(remapdict)
 LABELS_REMAP = kitti_config["learning_map"]
+LABEL_INV_REMAP = kitti_config["learning_map_inv"]
 # LABELS_REMAP = np.array(LABE)
 # print(type(LABELS_REMAP))
 
@@ -119,6 +120,22 @@ class KittiDataset(Dataset):
     def __len__(self):
         return sum(self._num_frames_scene)
     
+
+    def get_inv_remap_lut(self):
+        '''
+        remap_lut to remap classes of semantic kitti for training...
+        :return:
+        '''
+
+        # make lookup table for mapping
+        maxkey = max(LABEL_INV_REMAP.keys())
+
+        # +100 hack making lut bigger just in case there are unknown labels
+        remap_lut = np.zeros((maxkey + 1), dtype=np.int32)
+        remap_lut[list(LABEL_INV_REMAP.keys())] = list(LABEL_INV_REMAP.values())
+
+        return remap_lut
+
     def get_remap_lut(self):
         '''
         remap_lut to remap classes of semantic kitti for training...
@@ -166,15 +183,22 @@ class KittiDataset(Dataset):
         
         if self.voxelize_input and self.random_flips:
             # X flip
-            if np.random.randint(2):
+            rand_num = np.random.randint(3)
+            if rand_num == 0:
                 output = np.flip(output, axis=0)
                 counts = np.flip(counts, axis=0)
                 current_horizon = np.flip(current_horizon, axis=1) # Because there is a time dimension
             # Y Flip
-            if np.random.randint(2):
+            if rand_num == 1:
                 output = np.flip(output, axis=1)
                 counts = np.flip(counts, axis=1)
                 current_horizon = np.flip(current_horizon, axis=2) # Because there is a time dimension
+            
+            # add X/Y flip
+            if rand_num == 2:
+                output = np.flip(np.flip(output, axis=0), axis=1)
+                counts = np.flip(np.flip(counts, axis=0), axis=1)
+                current_horizon = np.flip(np.flip(current_horizon, axis=1), axis=2) # Because there is a time dimension
                 
         if self.remap:
             output = self._remap_lut[output].astype(np.uint8)

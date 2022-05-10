@@ -1,7 +1,6 @@
-from cv2 import split
 import torch
 import sys
-from torch._C import LongStorageBase
+# from torch._C import LongStorageBase
 
 sys.path.append("./Models")
 from Models.utils import *
@@ -55,11 +54,11 @@ x_dim = 256
 y_dim = 256
 z_dim = 32
 model_name = "MotionSC"
-num_workers = 4
-train_dir = "/media/sdb1/kitti"
-val_dir = "/media/sdb1/kitti"
+num_workers = 16
+train_dir = "/media/jingyu/Jingyu-Data/dataset"
+val_dir = "/media/jingyu/Jingyu-Data/dataset"
 cylindrical = False
-epoch_num = 500
+epoch_num = 100
 remap = True
 num_classes = 20
 
@@ -125,19 +124,28 @@ for epoch in range(epoch_num):
         mask = counts == 0
         output_masked = output[mask]
         preds_masked = preds[mask]
+
+        new_mask = counts == 1
+        output[new_mask] = 255
         if resample_free:
             preds_masked, output_masked = resample_free_space(preds_masked, output_masked)
 
-        loss = criterion(preds_masked, output_masked)
+        # loss = criterion(preds_masked, output_masked)
+        loss = criterion(preds, output)
         loss.backward()
         optimizer.step()
         
         # Accuracy
         with torch.no_grad():
             probs = nn.functional.softmax(preds_masked, dim=1)
-            preds_masked = np.argmax(probs.detach().cpu().numpy(), axis=1)
-            outputs_np = output_masked.detach().cpu().numpy()
-            accuracy = np.sum(preds_masked == outputs_np) / outputs_np.shape[0]
+            # preds_masked = np.argmax(probs.detach().cpu().numpy(), axis=1)
+            # outputs_np = output_masked.detach().cpu().numpy()
+            # accuracy = np.sum(preds_masked == outputs_np) / outputs_np.shape[0]
+
+            preds_masked = torch.argmax(probs.detach(), dim=1)
+            accuracy = torch.sum(preds_masked == output_masked.detach()) / output_masked.shape[0]
+            # num_correct += torch.sum(preds_masked == output_masked)
+            # num_total += output_masked.shape[0]
             
         # Record
         writer.add_scalar(model_name + '/Loss/Train', loss.item(), train_count)
