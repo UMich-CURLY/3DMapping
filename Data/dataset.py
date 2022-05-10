@@ -19,23 +19,23 @@ LABELS_REMAP = np.array([
     3, # Other
     4, # Pedestrian
     5, # Pole or Traffic Light/Sign
-    7, # Roadline -> Road
-    7, # Road
+    6, # Roadline -> Road
+    6, # Road
     8, # Sidewalk
     9, # Vegetation
     10, # Vehicles
     2, # Wall -> Barrier
     5, # Traffic Sign -> Pole
-    6, # Sky -> Other
-    11, # Ground
-    6, # Bridge -> Other
-    6, # Railtrack -> Other
+    3, # Sky -> Other
+    7, # Ground
+    3, # Bridge -> Other
+    3, # Railtrack -> Other
     2, # GuardRail -> Barrier
     5, # Traffic Light -> Pole
-    6, # Static -> Other
-    6, # Dynamic -> Other
-    6, # Water -> Other
-    11, # Terrain -> Ground
+    3, # Static -> Other
+    3, # Dynamic -> Other
+    3, # Water -> Other
+    7, # Terrain -> Ground
 ]) 
 
 
@@ -51,14 +51,15 @@ class CarlaDataset(Dataset):
         voxelize_input=True,
         binary_counts=False,
         random_flips=False,
-        remap=False
+        remap=False,
+        get_gt=True
         ):
         '''Constructor.
         Parameters:
             directory: directory to the dataset
 
         '''
-
+        self.get_gt = get_gt
         self.voxelize_input = voxelize_input
         self.binary_counts = binary_counts
         self._directory = directory
@@ -154,9 +155,6 @@ class CarlaDataset(Dataset):
             voxel_grid[t_i, unique_voxels[:, 0], unique_voxels[:, 1], unique_voxels[:, 2]] += counts
         return voxel_grid
 
-    def get_file_path(self, idx):
-        print(self._frames_list[idx])
-
     def __getitem__(self, idx):
         # -1 indicates no data
         # the final index is the output
@@ -173,15 +171,20 @@ class CarlaDataset(Dataset):
                 
             else:
                 points = np.fromfile(self._velodyne_list[i],dtype=np.float32).reshape(-1,4)[:, :3]
+
             if self.voxelize_input:
                 current_horizon = self.points_to_voxels(current_horizon, points, t_i)
             else:
                 current_horizon.append(points)
             t_i += 1
-        
-        output = np.fromfile(self._eval_labels[idx_range[-1]],dtype=np.uint32).reshape(self._eval_size).astype(np.uint8)
-        counts = np.fromfile(self._eval_counts[idx_range[-1]],dtype=np.float32).reshape(self._eval_size)
-        
+
+        if self.get_gt:
+            output = np.fromfile(self._eval_labels[idx_range[-1]],dtype=np.uint32).reshape(self._eval_size).astype(np.uint8)
+            counts = np.fromfile(self._eval_counts[idx_range[-1]],dtype=np.float32).reshape(self._eval_size)
+        else:
+            output = None
+            counts = None
+
         if self.voxelize_input and self.random_flips:
             # X flip
             if np.random.randint(2):
