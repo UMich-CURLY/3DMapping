@@ -47,11 +47,12 @@ class CarlaDataset(Dataset):
     def __init__(self, directory,
         device='cuda',
         num_frames=4,
-        cylindrical=True,
+        cylindrical=False,
         voxelize_input=True,
         binary_counts=False,
         random_flips=False,
         remap=False,
+        transform_pose=False,
         get_gt=True
         ):
         '''Constructor.
@@ -67,6 +68,7 @@ class CarlaDataset(Dataset):
         self.device = device
         self.random_flips = random_flips
         self.remap = remap
+        self.transform_pose = transform_pose
         
         self._scenes = sorted(os.listdir(self._directory))
         if cylindrical:
@@ -155,22 +157,36 @@ class CarlaDataset(Dataset):
             voxel_grid[t_i, unique_voxels[:, 0], unique_voxels[:, 1], unique_voxels[:, 2]] += counts
         return voxel_grid
 
+    def get_pose(self, idx):
+        pose = np.zeros((4, 4))
+        pose[3, 3] = 1
+        pose[:3, :4] = self._poses[idx].reshape(3, 4)
+        return pose
+
     def __getitem__(self, idx):
         # -1 indicates no data
         # the final index is the output
         idx_range = self.find_horizon(idx)
+        if self.transform_pose:
+            ego_pose = self.get_pose(idx_range[-1])
+            to_ego = np.linalg.inv(ego_pose)
          
         if self.voxelize_input:
             current_horizon = np.zeros((idx_range.shape[0], int(self.grid_dims[0]), int(self.grid_dims[1]), int(self.grid_dims[2])), dtype=np.float32)
         else:
             current_horizon = []
         t_i = 0
+
         for i in idx_range:
             if i == -1: # Zero pad
                 points = np.zeros((1, 3), dtype=np.float32)
                 
             else:
-                points = np.fromfile(self._velodyne_list[i],dtype=np.float32).reshape(-1,4)[:, :3]
+                points = np.fromfile(self._velodyne_list[i],dtype=np.float32).reshape(-1, 4)[:, :3]
+                if self.transform_pose:
+                    to_world = self.get_pose(i)
+                    relative_pose = np.matmul(to_ego, to_world)
+                    points = np.dot(relative_pose[:3, :3], points.T).T + relative_pose[:3, 3]
 
             if self.voxelize_input:
                 current_horizon = self.points_to_voxels(current_horizon, points, t_i)

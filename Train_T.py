@@ -42,9 +42,13 @@ seed = 42
 x_dim = 128
 y_dim = 128
 z_dim = 8
-T = 2
+
+T = 10
+binary_counts = True
+transform_pose = True
+
 model_name = "MotionSC"
-num_workers = 16
+num_workers = 8
 train_dir = "./Data/Scenes/Cartesian/Train"
 val_dir = "./Data/Scenes/Cartesian/Val"
 cylindrical = False
@@ -81,14 +85,16 @@ BETA1 = 0.9
 BETA2 = 0.999
 model, B, __, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device, T=T)
 model_name += "_" + str(num_classes) + "_T" + str(T)
+if binary_counts:
+    model_name += "B"
 print("Running:", model_name)
 
 # Data Loaders
-carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True, remap=remap)
+carla_ds = CarlaDataset(directory=train_dir, device=device, num_frames=T, cylindrical=cylindrical, random_flips=True, remap=remap, binary_counts=binary_counts, transform_pose=transform_pose)
 dataloader = DataLoader(carla_ds, batch_size=B, shuffle=True, collate_fn=carla_ds.collate_fn, num_workers=num_workers)
-val_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
+val_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap, binary_counts=binary_counts, transform_pose=transform_pose)
 dataloader_val = DataLoader(val_ds, batch_size=B, shuffle=True, collate_fn=val_ds.collate_fn, num_workers=num_workers)
-test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
+test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap, binary_counts=binary_counts, transform_pose=transform_pose)
 dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
 
 
