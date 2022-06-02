@@ -179,9 +179,9 @@ for epoch in range(epoch_num):
 
         for input_data, output, counts in dataloader_val:
             optimizer.zero_grad()
-            input_data = torch.tensor(input_data).to(device)
-            output = torch.tensor(output).to(device)
-            counts = torch.tensor(counts).to(device)
+            input_data = torch.from_numpy(np.array(input_data)).to(device)
+            output = torch.from_numpy(np.array(output)).to(device)
+            counts = torch.from_numpy(np.array(counts)).to(device)
             preds = model(input_data)
 
             counts = counts.view(-1)
