@@ -121,8 +121,8 @@ def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, devic
     # Model parameters
     resample_free = False
     if model_name == "MotionSC":
-        B = 16
-        T = 20
+        B = 8
+        T = 10
         model = MotionSC(voxel_sizes, coor_ranges, grid_dim, T=T, device=device, num_classes=num_classes)
         decayRate = 0.96
     elif model_name == "LMSC":

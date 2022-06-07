@@ -221,19 +221,19 @@ class Rellis3dDataset(Dataset):
                     points = np.dot(relative_pose[:3, :3], points.T).T + relative_pose[:3, 3]
 
                 gt_labels = np.fromfile(self._label_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
-
                 labels = np.fromfile(self._pred_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
 
                 # Filter points outside of voxel grid
                 grid_point_mask= np.all(
                     (points < self.max_bound) & (points >= self.min_bound), axis=1)
                 points = points[grid_point_mask, :]
+                gt_labels = gt_labels[grid_point_mask]
                 labels = labels[grid_point_mask]
 
                 if self.remap:
                     gt_labels = LABELS_REMAP[gt_labels].astype(np.uint8)
                     labels = LABELS_REMAP[labels].astype(np.uint8)
-
+                
                 # Ego vehicle = 0
                 valid_point_mask = np.isin(gt_labels, DYNAMIC_LABELS, invert=True)
                 points = points[valid_point_mask]
@@ -258,7 +258,7 @@ class Rellis3dDataset(Dataset):
                 output = np.flip(output, axis=1)
                 counts = np.flip(counts, axis=1)
                 current_horizon = np.flip(current_horizon, axis=2) # Because there is a time dimension
-        # pdb.set_trace()
+
         return current_horizon, output, counts
 
     def find_horizon(self, scene_id, idx):
