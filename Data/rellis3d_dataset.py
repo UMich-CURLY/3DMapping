@@ -173,6 +173,12 @@ class Rellis3dDataset(Dataset):
             unique_voxels = unique_voxels.astype(np.int)
             voxel_grid[t_i, unique_voxels[:, 0], unique_voxels[:, 1], unique_voxels[:, 2]] += counts
         return voxel_grid
+
+    def get_pose(self, scene_id, frame_id):
+        pose = np.zeros((4, 4))
+        pose[3, 3] = 1
+        pose[:3, :4] = self._poses[scene_id][frame_id].reshape(3, 4)
+        return pose
     
     def __getitem__(self, idx):
         scene_name  = self._scenes_list[idx]
@@ -196,9 +202,8 @@ class Rellis3dDataset(Dataset):
         output[dynamic_entries] = 0 # Zero all dynamic objects for ground truth voxels
         counts = output > 0 # Since counts are only used for occupancy, this is fine
 
-        curr_pose_mat = self._poses[scene_id][idx_range[-1]].reshape(3, 4)
-        curr_pose_rot   = curr_pose_mat[0:3, 0:3].T # Global to current rot R^T
-        curr_pose_trans = -curr_pose_rot @ curr_pose_mat[:, 3] # Global to current trans (-R^T * t)
+        ego_pose = self.get_pose(scene_id, idx_range[-1])
+        to_ego   = np.linalg.inv(ego_pose)
         
         t_i = 0
         for i in idx_range:
@@ -210,17 +215,14 @@ class Rellis3dDataset(Dataset):
                     dtype=np.float32).reshape(-1,4)[:, :3]
 
                 if self.apply_transform:
-                    prev_pose_mat = self._poses[scene_id][i].reshape(3, 4)
-                    prev_pose_rot = prev_pose_mat[0:3, 0:3]
-                    prev_pose_trans= prev_pose_mat[:, 3]
-                    # pdb.set_trace()
-                    points_in_global = ((prev_pose_rot @ points.T).T + prev_pose_trans)
-                    points = (curr_pose_rot @ points_in_global.T).T + curr_pose_trans
-                if not self.use_gt:
-                    preds = np.fromfile(self._pred_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
-                else:
-                    preds = np.fromfile(self._label_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
-                labels = preds & 0xFFFF
+                    to_world   = self.get_pose(scene_id, i)
+                    to_world = to_world
+                    relative_pose = np.matmul(to_ego, to_world)
+                    points = np.dot(relative_pose[:3, :3], points.T).T + relative_pose[:3, 3]
+
+                gt_labels = np.fromfile(self._label_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
+
+                labels = np.fromfile(self._pred_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
 
                 # Filter points outside of voxel grid
                 grid_point_mask= np.all(
@@ -229,13 +231,11 @@ class Rellis3dDataset(Dataset):
                 labels = labels[grid_point_mask]
 
                 if self.remap:
+                    gt_labels = LABELS_REMAP[gt_labels].astype(np.uint8)
                     labels = LABELS_REMAP[labels].astype(np.uint8)
 
                 # Ego vehicle = 0
-                dynamic_mask = np.logical_not(
-                    np.isin(labels, DYNAMIC_LABELS)
-                )
-                valid_point_mask = dynamic_mask & (labels!=0) #& np.logical_not(invalid_voxels_mask) 
+                valid_point_mask = np.isin(gt_labels, DYNAMIC_LABELS, invert=True)
                 points = points[valid_point_mask]
                 labels = labels[valid_point_mask]
 
