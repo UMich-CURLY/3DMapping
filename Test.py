@@ -6,11 +6,11 @@
 
 import torch
 import sys
-from torch._C import LongStorageBase
 
 sys.path.append("./Models")
 from Models.utils import *
 from Data.dataset import CarlaDataset
+from Data.rellis3d_dataset import Rellis3dDataset
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 import math
@@ -29,50 +29,54 @@ import pdb
 from PIL import Image
 import psutil
 
-from ptflops import get_model_complexity_info
+# from ptflops import get_model_complexity_info
 
 from torch.utils.tensorboard import SummaryWriter
 
 # TODO: you may change these parameters if needed
 # Put parameters here
 seed = 42
-x_dim = 128
-y_dim = 128
-z_dim = 8
+x_dim = 256
+y_dim = 256
+z_dim = 16
 
 # TODO: you may change these parameters if needed
 model_name = "MotionSC" #MotionSC LMSC
-num_workers = 8
-train_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test"
-val_dir = "./Data/Scenes/Cartesian/Test_Cartesian/Test/"
+num_workers = 16
+val_dir = "/home/arthurzhang/Data/Rellis-3D"
 cylindrical = False
 epoch_num = 500
-MODEL_PATH = "./Models/Weights/MotionSC_11/Epoch12.pt"
+MODEL_PATH = "./Models/Weights/MotionSC_21/t1/Epoch17.pt"
 
 # TODO: you may change these parameters if needed
 # Which task to perform
 VISUALIZE = False
 MEASURE_INFERENCE = False
-MEASURE_MIOU = False
-MEASURE_ACCURACY = False
-SAVE_PREDS = False
+MEASURE_MIOU = True
+MEASURE_ACCURACY = True
+SAVE_PREDS = True
 MEASURE_GEOMETRY = False
-MEASURE_SIZE = True
+MEASURE_SIZE = False
+remap=False
 
 if remap:
     num_classes = 11
 else:
-    num_classes = 23
+    num_classes = 21
 
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Data loaders
-test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=1, cylindrical=cylindrical, remap=remap)
-dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
+# test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=1, cylindrical=cylindrical, remap=remap)
+# dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
+rellis_ds = Rellis3dDataset(directory=val_dir, device=device, 
+    num_frames=10, remap=True, use_aug=False, use_gt=True, model_setting="test")
+dataloader_test = DataLoader(rellis_ds, batch_size=1, shuffle=False, collate_fn=rellis_ds.collate_fn, num_workers=num_workers)
+
 
 # Grid parameters
-coor_ranges = test_ds._eval_param['min_bound'] + test_ds._eval_param['max_bound']
+coor_ranges = rellis_ds._eval_param['min_bound'] + rellis_ds._eval_param['max_bound']
 voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
               abs(coor_ranges[4] - coor_ranges[1]) / y_dim,
               abs(coor_ranges[5] - coor_ranges[2]) / z_dim] # since BEV
@@ -83,8 +87,8 @@ model_name += "_" + str(num_classes)
 print("Running:", model_name)
 
 # Data loaders
-test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
-dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
+# test_ds = CarlaDataset(directory=val_dir, device=device, num_frames=T, cylindrical=cylindrical, remap=remap)
+# dataloader_test = DataLoader(test_ds, batch_size=1, shuffle=False, collate_fn=test_ds.collate_fn, num_workers=num_workers)
 
 
 writer = SummaryWriter("./Models/Runs/" + model_name)
@@ -138,7 +142,7 @@ if MEASURE_INFERENCE:
     starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
     with torch.no_grad():
         for input_data, output, counts in dataloader_test:
-            input_data = torch.tensor(input_data).to(test_ds.device)
+            input_data = torch.tensor(input_data).to(rellis_ds.device)
             starter.record()
             preds = model(input_data)
             ender.record()
@@ -247,16 +251,16 @@ if MEASURE_GEOMETRY:
 
 if SAVE_PREDS:
     with torch.no_grad():
-        for idx in range(test_ds.__len__()):
+        for idx in range(rellis_ds.__len__()):
             # File path
-            point_path = test_ds._velodyne_list[idx]
+            point_path = rellis_ds._velodyne_list[idx]
             paths = point_path.split("/")
             save_dir = os.path.join(*paths[:-2], model_name)
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             fpath = os.path.join(save_dir, paths[-1].split(".")[0] + ".label")
             # Input data
-            current_horizon, output, counts = test_ds.__getitem__(idx)
+            current_horizon, output, counts = rellis_ds.__getitem__(idx)
             input_data = torch.tensor(current_horizon).to(device)
             input_data = torch.unsqueeze(input_data, 0)
             # Label predictions

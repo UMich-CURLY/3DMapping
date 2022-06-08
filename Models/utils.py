@@ -11,29 +11,27 @@ from LMSCNet_SS import LMSCNet_SS
 from SSCNet import SSCNet
 
 frequencies_cartesian = np.asarray([
-    4166593275,
-    42309744,
-    8550180,
-    478193,
-    905663,
-    2801091,
-    6452733,
-    229316930,
-    112863867,
-    29816894,
-    13839655,
-    15581458,
-    221821,
-    0,
-    7931550,
-    467989,
-    3354,
-    9201043,
-    61011,
-    3796746,
-    3217865,
-    215372,
-    79669695
+    0,         # Marked as zero because void is filtered out 
+    0,   
+    257352935,    
+    64627941,          
+    16752,          
+    224016,
+    0,          
+    0,          
+    0,          
+    0,          
+    0,      
+    539944,
+    0,          
+    1543817,   
+    158171883,     
+    9730727,     
+    3474123,     
+    1478073,
+    5743794,     
+    3345519,  
+    0
     ])
 
 LABEL_COLORS = np.array([
@@ -121,7 +119,7 @@ def get_model(model_name, num_classes, voxel_sizes, coor_ranges, grid_dim, devic
     # Model parameters
     resample_free = False
     if model_name == "MotionSC":
-        B = 8
+        B = 10
         T = 10
         model = MotionSC(voxel_sizes, coor_ranges, grid_dim, T=T, device=device, num_classes=num_classes)
         decayRate = 0.96
