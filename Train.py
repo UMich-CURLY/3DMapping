@@ -134,7 +134,7 @@ for epoch in range(epoch_num):
         preds = preds.contiguous().view(-1, preds.shape[4])
 
         # Criterion requires input (NxC), output (N) dimension
-        mask = (counts > 0) & torch.isin(output, dynamic_labels_torch, invert=True)
+        mask = (counts > 0) & (output != 0) & (output!=20)
 
         output_masked = output[mask]
         preds_masked = preds[mask]
@@ -192,7 +192,7 @@ for epoch in range(epoch_num):
             preds = preds.contiguous().view(-1, preds.shape[4])
 
             # Criterion requires input (NxC), output (N) dimension
-            mask = counts > 0
+            mask = (counts > 0) & (output != 0) & (output!=20)
             output_masked = output[mask]
             preds_masked = preds[mask]
             loss = criterion(preds_masked, output_masked)
