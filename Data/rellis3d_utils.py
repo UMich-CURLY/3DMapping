@@ -9,25 +9,25 @@ import torch
 CLASS_COUNTS_REMAPPED = np.array([
     0,         # Marked as zero because void is filtered out 
     0,   
-    74318204,    
-    22488469,          
-    8791,          
-    18146,
+    257352935,    
+    64627941,          
+    16752,          
+    224016,
+    0,          
+    75812,          
     0,          
     0,          
-    0,          
-    10,          
     0,      
-    165493,
-    0,          
-    893182,   
-    29060462,     
-    6046058,     
-    355384,     
-    269356,
-    951300,     
-    905264,  
-    839469936
+    539944,
+    10538966,          
+    1543817,   
+    158171883,     
+    9730727,     
+    3474123,     
+    1478073,
+    5743794,     
+    3345519,  
+    0
 ], dtype=np.long)
 
 
@@ -76,7 +76,7 @@ LABELS_REMAP = np.array([
 ], dtype=np.uint8)
 
 DYNAMIC_LABELS = np.array([
-    0, 7, 8, 12
+    0, 20 #7, 8, 12
 ])
 
 colors = np.array([ # RGB

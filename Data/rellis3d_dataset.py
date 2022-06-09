@@ -195,7 +195,6 @@ class Rellis3dDataset(Dataset):
         output = np.fromfile(
                 self._voxel_label_list[scene_id][idx_range[-1]], dtype=np.uint8
             ).reshape(self.grid_dims.astype(np.int))
-
         output = LABELS_REMAP[output].astype(np.uint8)
         dynamic_entries =np.isin(output, DYNAMIC_LABELS)
 
@@ -209,7 +208,6 @@ class Rellis3dDataset(Dataset):
         for i in idx_range:
             if i == -1: # Zero pad
                 points = np.zeros((1, 3), dtype=np.float16)
-                labels = np.zeros((1,), dtype=np.uint8)
             else:
                 points = np.fromfile(self._velodyne_list[scene_id][i], 
                     dtype=np.float32).reshape(-1,4)[:, :3]
@@ -221,23 +219,19 @@ class Rellis3dDataset(Dataset):
                     points = np.dot(relative_pose[:3, :3], points.T).T + relative_pose[:3, 3]
 
                 gt_labels = np.fromfile(self._label_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
-                labels = np.fromfile(self._pred_list[scene_id][i], dtype=np.uint32).reshape((-1)).astype(np.uint8)
 
                 # Filter points outside of voxel grid
                 grid_point_mask= np.all(
                     (points < self.max_bound) & (points >= self.min_bound), axis=1)
                 points = points[grid_point_mask, :]
                 gt_labels = gt_labels[grid_point_mask]
-                labels = labels[grid_point_mask]
 
                 if self.remap:
                     gt_labels = LABELS_REMAP[gt_labels].astype(np.uint8)
-                    labels = LABELS_REMAP[labels].astype(np.uint8)
                 
                 # Ego vehicle = 0
                 valid_point_mask = np.isin(gt_labels, DYNAMIC_LABELS, invert=True)
                 points = points[valid_point_mask]
-                labels = labels[valid_point_mask]
 
                 # Convert points to voxel grid
                 if self.voxelize_input:

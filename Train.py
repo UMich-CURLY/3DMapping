@@ -32,15 +32,15 @@ from Data.rellis3d_utils import *
 # TODO: you may change these parameters if needed
 # PARAMETERS
 seed = 42
-x_dim = 128
-y_dim = 128
+x_dim = 256
+y_dim = 256
 z_dim = 16
 model_name = "MotionSC"
 num_workers = 16
-# train_dir = "/workspace/Data/rellis3dfull"
-# val_dir = "/workspace/Data/rellis3dfull"
-train_dir = "/home/arthurzhang/Data/Rellis-3D"
-val_dir = "/home/arthurzhang/Data/Rellis-3D"
+train_dir = "/workspace/Data/rellis3dfull"
+val_dir = "/workspace/Data/rellis3dfull"
+# train_dir = "/home/arthurzhang/Data/Rellis-3D"
+# val_dir = "/home/arthurzhang/Data/Rellis-3D"
 cylindrical = False
 epoch_num = 500
 remap = False
@@ -81,10 +81,11 @@ voxel_sizes = [abs(coor_ranges[3] - coor_ranges[0]) / x_dim,
 
 # TODO: you may change these parameters if needed
 # Load model
-lr = 0.001
+lr = 1e-3
 BETA1 = 0.9
 BETA2 = 0.999
-model, B, T, decayRate, resample_free = get_model(model_name, num_classes, voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
+model, B, T, decayRate, resample_free = get_model(model_name, num_classes, 
+    voxel_sizes, coor_ranges, [x_dim, y_dim, z_dim], device)
 model_name += "_" + str(num_classes)
 print("Running:", model_name)
 
@@ -115,13 +116,14 @@ optimizer = optim.Adam(model.parameters(), lr=lr, betas=(BETA1, BETA2))
 my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=decayRate)
 
 train_count = 0
+dynamic_labels_torch = torch.from_numpy(DYNAMIC_LABELS).to(device=device)
 for epoch in range(epoch_num):
     # Training
     model.train()
     iteration=0
     for input_data, output, counts in dataloader:
         optimizer.zero_grad()
-
+        
         input_data = torch.from_numpy(np.array(input_data)).to(device)
         output = torch.from_numpy(np.array(output)).to(device)
         counts = torch.from_numpy(np.array(counts)).to(device)
@@ -132,10 +134,11 @@ for epoch in range(epoch_num):
         preds = preds.contiguous().view(-1, preds.shape[4])
 
         # Criterion requires input (NxC), output (N) dimension
-        mask = counts > 0
+        mask = (counts > 0) & torch.isin(output, dynamic_labels_torch, invert=True)
 
         output_masked = output[mask]
         preds_masked = preds[mask]
+
         if resample_free:
             preds_masked, output_masked = resample_free_space(preds_masked, output_masked)
 
