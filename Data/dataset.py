@@ -19,23 +19,23 @@ LABELS_REMAP = np.array([
     3, # Other
     4, # Pedestrian
     5, # Pole or Traffic Light/Sign
-    7, # Roadline -> Road
-    7, # Road
+    6, # Roadline -> Road
+    6, # Road
     8, # Sidewalk
     9, # Vegetation
     10, # Vehicles
     2, # Wall -> Barrier
     5, # Traffic Sign -> Pole
-    6, # Sky -> Other
-    11, # Ground
-    6, # Bridge -> Other
-    6, # Railtrack -> Other
+    3, # Sky -> Other
+    7, # Ground
+    3, # Bridge -> Other
+    3, # Railtrack -> Other
     2, # GuardRail -> Barrier
     5, # Traffic Light -> Pole
-    6, # Static -> Other
-    6, # Dynamic -> Other
-    6, # Water -> Other
-    11, # Terrain -> Ground
+    3, # Static -> Other
+    3, # Dynamic -> Other
+    3, # Water -> Other
+    7, # Terrain -> Ground
 ]) 
 
 
@@ -47,18 +47,20 @@ class CarlaDataset(Dataset):
     def __init__(self, directory,
         device='cuda',
         num_frames=4,
-        cylindrical=True,
+        cylindrical=False,
         voxelize_input=True,
         binary_counts=False,
         random_flips=False,
-        remap=False
+        remap=False,
+        transform_pose=False,
+        get_gt=True
         ):
         '''Constructor.
         Parameters:
             directory: directory to the dataset
 
         '''
-
+        self.get_gt = get_gt
         self.voxelize_input = voxelize_input
         self.binary_counts = binary_counts
         self._directory = directory
@@ -66,6 +68,7 @@ class CarlaDataset(Dataset):
         self.device = device
         self.random_flips = random_flips
         self.remap = remap
+        self.transform_pose = transform_pose
         
         self._scenes = sorted(os.listdir(self._directory))
         if cylindrical:
@@ -154,34 +157,50 @@ class CarlaDataset(Dataset):
             voxel_grid[t_i, unique_voxels[:, 0], unique_voxels[:, 1], unique_voxels[:, 2]] += counts
         return voxel_grid
 
-    def get_file_path(self, idx):
-        print(self._frames_list[idx])
+    def get_pose(self, idx):
+        pose = np.zeros((4, 4))
+        pose[3, 3] = 1
+        pose[:3, :4] = self._poses[idx].reshape(3, 4)
+        return pose
 
     def __getitem__(self, idx):
         # -1 indicates no data
         # the final index is the output
         idx_range = self.find_horizon(idx)
+        if self.transform_pose:
+            ego_pose = self.get_pose(idx_range[-1])
+            to_ego = np.linalg.inv(ego_pose)
          
         if self.voxelize_input:
             current_horizon = np.zeros((idx_range.shape[0], int(self.grid_dims[0]), int(self.grid_dims[1]), int(self.grid_dims[2])), dtype=np.float32)
         else:
             current_horizon = []
         t_i = 0
+
         for i in idx_range:
             if i == -1: # Zero pad
                 points = np.zeros((1, 3), dtype=np.float32)
                 
             else:
-                points = np.fromfile(self._velodyne_list[i],dtype=np.float32).reshape(-1,4)[:, :3]
+                points = np.fromfile(self._velodyne_list[i],dtype=np.float32).reshape(-1, 4)[:, :3]
+                if self.transform_pose:
+                    to_world = self.get_pose(i)
+                    relative_pose = np.matmul(to_ego, to_world)
+                    points = np.dot(relative_pose[:3, :3], points.T).T + relative_pose[:3, 3]
+
             if self.voxelize_input:
                 current_horizon = self.points_to_voxels(current_horizon, points, t_i)
             else:
                 current_horizon.append(points)
             t_i += 1
-        
-        output = np.fromfile(self._eval_labels[idx_range[-1]],dtype=np.uint32).reshape(self._eval_size).astype(np.uint8)
-        counts = np.fromfile(self._eval_counts[idx_range[-1]],dtype=np.float32).reshape(self._eval_size)
-        
+
+        if self.get_gt:
+            output = np.fromfile(self._eval_labels[idx_range[-1]],dtype=np.uint32).reshape(self._eval_size).astype(np.uint8)
+            counts = np.fromfile(self._eval_counts[idx_range[-1]],dtype=np.float32).reshape(self._eval_size)
+        else:
+            output = None
+            counts = None
+
         if self.voxelize_input and self.random_flips:
             # X flip
             if np.random.randint(2):

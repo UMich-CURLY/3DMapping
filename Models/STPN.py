@@ -46,15 +46,20 @@ def TemporalPooling(x, batch):
 
 
 class STPN(nn.Module):
-    def __init__(self, height_feat_size=13, cell_feat_size=60):
+    def __init__(self, height_feat_size=13, cell_feat_size=60, T=16):
         super(STPN, self).__init__()
         self.conv_pre_1 = nn.Conv2d(height_feat_size, 32, kernel_size=3, stride=1, padding=1)
         self.conv_pre_2 = nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1)
         self.bn_pre_1 = nn.BatchNorm2d(32)
         self.bn_pre_2 = nn.BatchNorm2d(32)
 
-        self.conv3d_1 = Conv3D(64, 64, kernel_size=(3, 1, 1), stride=1, padding=(0, 0, 0))
-        self.conv3d_2 = Conv3D(128, 128, kernel_size=(3, 1, 1), stride=1, padding=(0, 0, 0))
+        # Account for different time sizes
+        self.conv3d_1 = Conv3D(64, 64, kernel_size=(1, 1, 1), stride=1, padding=(0, 0, 0))
+        self.conv3d_2 = Conv3D(128, 128, kernel_size=(1, 1, 1), stride=1, padding=(0, 0, 0))
+        if T >= 3:
+            self.conv3d_1 = Conv3D(64, 64, kernel_size=(3, 1, 1), stride=1, padding=(0, 0, 0))
+        if T >= 5:
+            self.conv3d_2 = Conv3D(128, 128, kernel_size=(3, 1, 1), stride=1, padding=(0, 0, 0))
 
         self.conv1_1 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
