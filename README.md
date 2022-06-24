@@ -17,7 +17,7 @@ More introduction about CarlaSC dataset and download links are avialable on our 
 </p>
 
 ## Networks: **MotionSC**
-We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC uses temporal information to perform semantic scene completion in real-time, useful as a 3D local semantic map. We compare with baselines LMSCNet (3), JS3CNet (5), and SSCNet (6). A video comparison is shown below. Note that in the video, the ego vehicle is the stationary Tesla in the bottom right, and is excluded from the complete semantic scenes. 
+We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC extends semantic scene completion to achieve a higher level of scene understanding by integrating the structure of a view-volume scene completion network with the temporal backbone of an object tracking network. It is built off the idea that semantic scene completion is fundamentally a similar task to 3D semantic mapping, where the major difference is the use of temporal information, readily available in robotic applications. We compare with scene completion baselines LMSCNet (3), JS3CNet (5), and SSCNet (6). We show that the number of past scans (T) is correlated with improvements in semantic and geometric completeness quantitatively and qualitatively. Note that in the video below, the ego vehicle is the stationary Tesla in the bottom right, and is excluded from the complete semantic scenes. 
 
 <p align="center">
   <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
