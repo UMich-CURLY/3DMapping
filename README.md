@@ -6,6 +6,9 @@ Welcome! This repository contains all software used to create CarlaSC (our dynam
  - [Networks](#networks-motionsc)
  - [Use 3DMapping](#use-3dmapping)
    - [Dependencies](#dependencies)
+ - [Results](#results)
+   - [CarlaSC](#carlasc)
+   - [SemanticKITTI](#semantickitti)
  - [Acknowledgement](#acknowledgement)
 
 ## Data: **CarlaSC**
@@ -36,14 +39,41 @@ We provide script to generate the dataset. We also provide scripts for visualizi
 ### Training and Testing
 We provide synthetic scripts of training and testing MotionSC, LMSCNet and SSCNet in our repo. You can check the `TODO` block in scripts for parameters that could be adjusted. You can find how to use them on our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). Due to special dependencies of JS3CNet, you can check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it. 
 
+## Results
+We trained our model on the CarlaSC dataset and the SemanticKitti dataset. 
+
+### CarlaSC
+For the MotionSC model on CarlaSC we also list its performance using different number of frames.
+
+| Method          | Mean IoU | Accuracy |  Free | Building | Barrier | Other | Pedestrian |  Pole |  Road | Ground | Sidewalk | Vegetation | Vehicles |
+|-----------------|:--------:|:--------:|:-----:|:--------:|:-------:|:-----:|:----------:|:-----:|:-----:|:------:|:--------:|:----------:|:--------:|
+| LMSCNet SS      |   42.53  |   94.64  | 97.41 |   25.61  |   3.35  | 11.31 |    33.76   | 43.54 | 85.96 |  21.15 |   52.64  |    39.99   |   53.09  |
+| SSCNet Full     |   41.91  |   94.11  | 96.02 |   27.04  |   1.82  | 13.65 |    29.69   | 27.02 | 88.45 |  25.89 |   65.36  |    33.29   |   52.78  |
+| JS3C-Net        |   48.95  |   95.48  | 96.78 |   34.68  |   3.03  | 22.94 |    43.64   | 44.50 | 93.31 |  30.90 |   75.15  |    34.35   |   59.21  |
+| MotionSC (T=1)  |   46.31  |   95.11  | 97.42 |   31.59  |   2.63  | 14.77 |    39.87   | 42.11 | 90.57 |  25.89 |   60.77  |    42.41   |   61.37  |
+| MotionSC (T=5)  |   45.35  |   95.00  | 97.43 |   29.48  |   2.54  | 17.48 |    41.87   | 43.43 | 90.90 |  22.08 |   58.43  |    35.79   |   59.41  |
+| MotionSC (T=10) |   47.01  |   95.15  | 97.44 |   32.29  |   2.35  | 19.82 |    44.06   | 45.47 | 90.19 |  27.35 |   62.48  |    36.92   |   58.80  |
+| MotionSC (T=16) |   47.45  |   95.57  | 97.60 |   34.91  |   2.66  | 22.86 |    37.78   | 43.87 | 90.12 |  28.31 |   66.20  |    41.59   |   56.08  |
+
+### SemanticKITTI
+For the SemanticKITTI dataset, since single scan input is required, so our results was based on MotionSC (T=1). The results of other models are collected from their papers.
+
+| Method         | Mean IoU | Accuracy |  Road | Sidewalk | Parking | Other-ground | Building |  Car  | Truck | Bicycle | Motorcycle | Other-vehicle | vegetation | Trunk | Terrain | Person | Bicyclist | Motorcyclist | Fence |  Pole | Traffic-sign |
+|----------------|:--------:|:--------:|:-----:|:--------:|:-------:|:------------:|:--------:|:-----:|:-----:|:-------:|:----------:|:-------------:|:----------:|:-----:|:-------:|:------:|:---------:|:------------:|:-----:|:-----:|:------------:|
+| LMSCNet SS     |   17.62  |   56.72  | 64.80 |   34.68  |  29.02  |     4.62     |   38.08  | 30.89 |  1.47 |    0    |      0     |      0.81     |    41.31   | 19.89 |  32.05  |    0   |     0     |       0      | 21.32 | 15.01 |     0.84     |
+| SSCNet Full    |   16.14  |   49.98  | 51.15 |   30.76  |  27.12  |     6.44     |   34.53  | 24.26 |  1.18 |   0.54  |    0.78    |      4.34     |    35.25   | 18.17 |  29.01  |  0.25  |    0.25   |     0.03     | 19.87 | 13.10 |     6.73     |
+| JS3C-Net       |   23.8   |   56.6   |  64.7 |   39.9   |   34.9  |     14.1     |   37.4   |  33.3 |  7.2  |   14.4  |     8.8    |      12.7     |    43.1    |  19.6 |   40.5  |   8.0  |    5.1    |      0.4     |  30.4 |  18.9 |     15.9     |
+| MotionSC (T=1) |   18.4   |   56.9   |  66.0 |   36.5   |   29.6  |      7.0     |   39.0   |  31.4 |  1.0  |    0    |      0     |      3.6      |    40.0    |  19.0 |   30.0  |    0   |     0     |       0      |  23.4 |  20.0 |      3.4     |
+
 ## Acknowledgement
 We utilize data and code from: 
 - [1] CARLA Simulator https://carla.org/ 
-- [2] MotionNet https://arxiv.org/abs/2003.06754 
-- [3] LMSCNet https://arxiv.org/abs/2008.10559
-- [4] Semantic KITTI https://arxiv.org/abs/1904.01416
-- [5] JS3CNet https://arxiv.org/abs/2012.03762
-- [6] SSCNet http://sscnet.cs.princeton.edu/
+- [2] SemanticKITTI http://www.semantic-kitti.org/
+- [3] MotionNet https://arxiv.org/abs/2003.06754 
+- [4] LMSCNet https://arxiv.org/abs/2008.10559
+- [5] Semantic KITTI https://arxiv.org/abs/1904.01416
+- [6] JS3CNet https://arxiv.org/abs/2012.03762
+- [7] SSCNet http://sscnet.cs.princeton.edu/
 
 ## Reference
 If you find our work useful in your research work, consider citing [our paper](https://arxiv.org/abs/2203.07060)!
