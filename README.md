@@ -16,14 +16,14 @@ A novel data set with accurate, complete dynamic outdoor scenes for semantic sce
 
 More introduction about CarlaSC dataset and download links are avialable on our [website](https://umich-curly.github.io/CarlaSC.github.io/).
 <p align="center">
-  <img width="740" src="https://user-images.githubusercontent.com/21368455/153008032-d1332e4a-4872-4348-99ec-9fb64106e849.png">
+  <img width="740" src="https://user-images.githubusercontent.com/91337470/175836944-f4c91add-95bc-490e-aaee-248005bf1351.png">
 </p>
 
 ## Networks: **MotionSC**
 We create a network using ideas from MotionNet (2) and LMSCNet (3), which we call MotionSC. MotionSC extends semantic scene completion to achieve a higher level of scene understanding by integrating the structure of a view-volume scene completion network with the temporal backbone of an object tracking network. It is built off the idea that semantic scene completion is fundamentally a similar task to 3D semantic mapping, where the major difference is the use of temporal information, readily available in robotic applications. We compare with scene completion baselines LMSCNet (3), JS3CNet (5), and SSCNet (6). We show that the number of past scans (T) is correlated with improvements in semantic and geometric completeness quantitatively and qualitatively. Note that in the video below, the ego vehicle is the stationary Tesla in the bottom right, and is excluded from the complete semantic scenes. 
 
 <p align="center">
-  <img width="740" src="https://user-images.githubusercontent.com/21368455/153005475-6ad63a00-b39e-477d-b887-07a3283fa14e.gif">
+  <img width="740" src="https://user-images.githubusercontent.com/91337470/175836958-8e08f5d7-2017-476e-a826-803e983cffa9.gif">
 </p>
 
 ## Use 3DMapping
