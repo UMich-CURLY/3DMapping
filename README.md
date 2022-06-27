@@ -43,7 +43,9 @@ We provide synthetic scripts of training and testing MotionSC, LMSCNet and SSCNe
 We trained our model on the CarlaSC dataset and the SemanticKitti dataset. 
 
 ### CarlaSC
-For the MotionSC model on CarlaSC we also list its performance using different number of frames.
+For the MotionSC model on CarlaSC we also list its performance dependent on the amount of temporal information provided, T.
+
+#### Semantic Completeness
 
 | Method          | Mean IoU | Accuracy |  Free | Building | Barrier | Other | Pedestrian |  Pole |  Road | Ground | Sidewalk | Vegetation | Vehicles |
 |-----------------|:--------:|:--------:|:-----:|:--------:|:-------:|:-----:|:----------:|:-----:|:-----:|:------:|:--------:|:----------:|:--------:|
@@ -55,8 +57,22 @@ For the MotionSC model on CarlaSC we also list its performance using different n
 | MotionSC (T=10) |   47.01  |   95.15  | 97.44 |   32.29  |   2.35  | 19.82 |    44.06   | 45.47 | 90.19 |  27.35 |   62.48  |    36.92   |   58.80  |
 | MotionSC (T=16) |   47.45  |   95.57  | 97.60 |   34.91  |   2.66  | 22.86 |    37.78   | 43.87 | 90.12 |  28.31 |   66.20  |    41.59   |   56.08  |
 
+#### Geometric Completeness
+
+| Method          | Precision | Recall |  IoU |
+|-----------------|:--------:|:--------:|:-----:|
+| LMSCNet SS      |   95.62  |   98.95  | 85.98 |
+| SSCNet Full     |   85.87  |   93.05  | 80.69 |
+| JS3C-Net        |   89.43  |   93.02  | 83.80 |
+| MotionSC (T=1)  |   93.32  |   92.16  | 86.46 |
+| MotionSC (T=5)  |   94.76  |   90.57  | 86.25 |
+| MotionSC (T=10) |   93.17  |   92.43  | 86.56 |
+| MotionSC (T=16) |   94.61  |   91.77  | 87.21 |
+
 ### SemanticKITTI
 For the SemanticKITTI dataset, since single scan input is required, so our results was based on MotionSC (T=1). The results of other models are collected from their papers.
+
+#### Semantic Completeness
 
 | Method         | Mean IoU | Accuracy |  Road | Sidewalk | Parking | Other-ground | Building |  Car  | Truck | Bicycle | Motorcycle | Other-vehicle | vegetation | Trunk | Terrain | Person | Bicyclist | Motorcyclist | Fence |  Pole | Traffic-sign |
 |----------------|:--------:|:--------:|:-----:|:--------:|:-------:|:------------:|:--------:|:-----:|:-----:|:-------:|:----------:|:-------------:|:----------:|:-----:|:-------:|:------:|:---------:|:------------:|:-----:|:-----:|:------------:|
