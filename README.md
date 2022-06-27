@@ -70,7 +70,7 @@ For the MotionSC model on CarlaSC we also list its performance dependent on the 
 | MotionSC (T=16) |   94.61  |   91.77  | 87.21 |
 
 ### SemanticKITTI
-For the SemanticKITTI dataset, since single scan input is required, so our results was based on MotionSC (T=1). The results of other models are collected from their papers.
+For the SemanticKITTI dataset, we only compare with T=1 as the rules of the competion require a single input frame. Our results may be found on the Semantic KITTI leader board under user "tigeriv4." The results of other models are collected from their papers.
 
 #### Semantic Completeness
 
