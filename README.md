@@ -45,6 +45,15 @@ We trained our model on the CarlaSC dataset and the SemanticKitti dataset.
 ### CarlaSC
 For the MotionSC model on CarlaSC we also list its performance dependent on the amount of temporal information provided, T.
 
+#### Inference Time (Measured on NVIDIA GeForce RTX 3090)
+
+| Method          | Latency (ms) |
+|-----------------|:------------:|
+| LMSCNet SS      |     4.86     |
+| SSCNet Full     |     2.18     |
+| JS3C-Net        |     166.2    |
+| **MotionSC (T=1)**  |     5.72     |
+
 #### Semantic Completeness
 
 | Method          | Mean IoU | Accuracy |  Free | Building | Barrier | Other | Pedestrian |  Pole |  Road | Ground | Sidewalk | Vegetation | Vehicles |
@@ -52,10 +61,10 @@ For the MotionSC model on CarlaSC we also list its performance dependent on the 
 | LMSCNet SS      |   42.53  |   94.64  | 97.41 |   25.61  |   3.35  | 11.31 |    33.76   | 43.54 | 85.96 |  21.15 |   52.64  |    39.99   |   53.09  |
 | SSCNet Full     |   41.91  |   94.11  | 96.02 |   27.04  |   1.82  | 13.65 |    29.69   | 27.02 | 88.45 |  25.89 |   65.36  |    33.29   |   52.78  |
 | JS3C-Net        |   48.95  |   95.48  | 96.78 |   34.68  |   3.03  | 22.94 |    43.64   | 44.50 | 93.31 |  30.90 |   75.15  |    34.35   |   59.21  |
-| MotionSC (T=1)  |   46.31  |   95.11  | 97.42 |   31.59  |   2.63  | 14.77 |    39.87   | 42.11 | 90.57 |  25.89 |   60.77  |    42.41   |   61.37  |
-| MotionSC (T=5)  |   45.35  |   95.00  | 97.43 |   29.48  |   2.54  | 17.48 |    41.87   | 43.43 | 90.90 |  22.08 |   58.43  |    35.79   |   59.41  |
-| MotionSC (T=10) |   47.01  |   95.15  | 97.44 |   32.29  |   2.35  | 19.82 |    44.06   | 45.47 | 90.19 |  27.35 |   62.48  |    36.92   |   58.80  |
-| MotionSC (T=16) |   47.45  |   95.57  | 97.60 |   34.91  |   2.66  | 22.86 |    37.78   | 43.87 | 90.12 |  28.31 |   66.20  |    41.59   |   56.08  |
+| **MotionSC (T=1)**  |   46.31  |   95.11  | 97.42 |   31.59  |   2.63  | 14.77 |    39.87   | 42.11 | 90.57 |  25.89 |   60.77  |    42.41   |   61.37  |
+| **MotionSC (T=5)**  |   45.35  |   95.00  | 97.43 |   29.48  |   2.54  | 17.48 |    41.87   | 43.43 | 90.90 |  22.08 |   58.43  |    35.79   |   59.41  |
+| **MotionSC (T=10)** |   47.01  |   95.15  | 97.44 |   32.29  |   2.35  | 19.82 |    44.06   | 45.47 | 90.19 |  27.35 |   62.48  |    36.92   |   58.80  |
+| **MotionSC (T=16)** |   47.45  |   95.57  | 97.60 |   34.91  |   2.66  | 22.86 |    37.78   | 43.87 | 90.12 |  28.31 |   66.20  |    41.59   |   56.08  |
 
 #### Geometric Completeness
 
@@ -64,10 +73,10 @@ For the MotionSC model on CarlaSC we also list its performance dependent on the 
 | LMSCNet SS      |   95.62  |   98.95  | 85.98 |
 | SSCNet Full     |   85.87  |   93.05  | 80.69 |
 | JS3C-Net        |   89.43  |   93.02  | 83.80 |
-| MotionSC (T=1)  |   93.32  |   92.16  | 86.46 |
-| MotionSC (T=5)  |   94.76  |   90.57  | 86.25 |
-| MotionSC (T=10) |   93.17  |   92.43  | 86.56 |
-| MotionSC (T=16) |   94.61  |   91.77  | 87.21 |
+| **MotionSC (T=1)**  |   93.32  |   92.16  | 86.46 |
+| **MotionSC (T=5)**  |   94.76  |   90.57  | 86.25 |
+| **MotionSC (T=10)** |   93.17  |   92.43  | 86.56 |
+| **MotionSC (T=16)** |   94.61  |   91.77  | 87.21 |
 
 ### SemanticKITTI
 For the SemanticKITTI dataset, we only compare with T=1 as the rules of the competion require a single input frame. Our results may be found on the Semantic KITTI leader board under user "tigeriv4." The results of other models are collected from their papers.
@@ -79,7 +88,7 @@ For the SemanticKITTI dataset, we only compare with T=1 as the rules of the comp
 | LMSCNet SS     |   17.62  |   56.72  | 64.80 |   34.68  |  29.02  |     4.62     |   38.08  | 30.89 |  1.47 |    0    |      0     |      0.81     |    41.31   | 19.89 |  32.05  |    0   |     0     |       0      | 21.32 | 15.01 |     0.84     |
 | SSCNet Full    |   16.14  |   49.98  | 51.15 |   30.76  |  27.12  |     6.44     |   34.53  | 24.26 |  1.18 |   0.54  |    0.78    |      4.34     |    35.25   | 18.17 |  29.01  |  0.25  |    0.25   |     0.03     | 19.87 | 13.10 |     6.73     |
 | JS3C-Net       |   23.8   |   56.6   |  64.7 |   39.9   |   34.9  |     14.1     |   37.4   |  33.3 |  7.2  |   14.4  |     8.8    |      12.7     |    43.1    |  19.6 |   40.5  |   8.0  |    5.1    |      0.4     |  30.4 |  18.9 |     15.9     |
-| MotionSC (T=1) |   18.4   |   56.9   |  66.0 |   36.5   |   29.6  |      7.0     |   39.0   |  31.4 |  1.0  |    0    |      0     |      3.6      |    40.0    |  19.0 |   30.0  |    0   |     0     |       0      |  23.4 |  20.0 |      3.4     |
+| **MotionSC (T=1)** |   18.4   |   56.9   |  66.0 |   36.5   |   29.6  |      7.0     |   39.0   |  31.4 |  1.0  |    0    |      0     |      3.6      |    40.0    |  19.0 |   30.0  |    0   |     0     |       0      |  23.4 |  20.0 |      3.4     |
 
 ## Acknowledgement
 We utilize data and code from: 
