@@ -40,7 +40,7 @@ We provide script to generate the dataset. We also provide scripts for visualizi
 We provide synthetic scripts of training and testing MotionSC, LMSCNet and SSCNet in our repo. You can check the `TODO` block in scripts for parameters that could be adjusted. You can find how to use them on our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). Due to special dependencies of JS3CNet, you can check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it. 
 
 ## Results
-We trained our model on the CarlaSC dataset and the SemanticKitti dataset. 
+We trained our model on the CarlaSC dataset and the SemanticKitti dataset. Note that while improved semantic scene completion networks are being released with better results, our method of incorporating temporal information may be applied to these networks for enhanced mapping capabilities. 
 
 ### CarlaSC
 For the MotionSC model on CarlaSC we also list its performance dependent on the amount of temporal information provided, T.
