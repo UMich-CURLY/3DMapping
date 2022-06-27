@@ -102,9 +102,8 @@ We utilize data and code from:
 - [2] SemanticKITTI http://www.semantic-kitti.org/
 - [3] MotionNet https://arxiv.org/abs/2003.06754 
 - [4] LMSCNet https://arxiv.org/abs/2008.10559
-- [5] Semantic KITTI https://arxiv.org/abs/1904.01416
-- [6] JS3CNet https://arxiv.org/abs/2012.03762
-- [7] SSCNet http://sscnet.cs.princeton.edu/
+- [5] JS3CNet https://arxiv.org/abs/2012.03762
+- [6] SSCNet http://sscnet.cs.princeton.edu/
 
 ## Reference
 If you find our work useful in your research work, consider citing [our paper](https://arxiv.org/abs/2203.07060)!
