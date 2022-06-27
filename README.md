@@ -35,7 +35,7 @@ We create a network using ideas from MotionNet (2) and LMSCNet (3), which we cal
 
 We also provide an environment.yml which you can use to create a conda environment
 ```
-conda env create -f environment.yaml
+conda env create -f environment.yml
 conda activate MotionSC
 ```
 
