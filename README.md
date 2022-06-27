@@ -33,6 +33,12 @@ We create a network using ideas from MotionNet (2) and LMSCNet (3), which we cal
 * [Spconv](https://github.com/traveller59/spconv) - Only required by JS3CNet. The JS3CNet is a little complicated on its dependency, please check our forked [JS3CNet](https://github.com/Song-Jingyu/JS3C-Net) to run it.
 * For data generation and visualization tasks, you can find the dependencies at [Wiki Home](https://github.com/UMich-CURLY/3DMapping/wiki) and [Data Visualization](https://github.com/UMich-CURLY/3DMapping/wiki/Data-Visualization).
 
+We also provide a en.yml which you can use to create the conda envieroment
+```
+conda env create -f environment.yaml
+conda activate neuralblox
+```
+
 ### Data Generation and Visualization
 We provide script to generate the dataset. We also provide scripts for visualizing the data. We have detailed explanation on the useful scripts and parameters in our [wiki](https://github.com/UMich-CURLY/3DMapping/wiki). You can check the `TODO` block in scripts for parameters that could be adjusted.
 
